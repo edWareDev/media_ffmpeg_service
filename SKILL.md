@@ -273,6 +273,117 @@ Variables comunes observadas:
 - Toda dependencia declarada en `package.json` debe tener uso real en código activo. Si una dependencia no se importa o no se usa, eliminarla. No mantener dependencias solo "por si acaso".
 - Agregar tests Vitest cuando el cambio toque parsers, validadores, reglas de negocio, errores o regresiones.
 
+## Tooling de desarrollo backend
+
+Para proyectos backend Node.js ESM, configurar tooling moderno desde el inicio y mantenerlo compatible con el flujo por capas del servicio.
+
+### Dependencias de desarrollo base
+
+Usar estas familias de dependencias para lint, tests y build cuando el proyecto no tenga una decisión diferente ya establecida:
+
+- `@eslint/js` v10.
+- `eslint` v10.
+- `globals` v17.
+- `vitest` v4.
+- `@vitest/eslint-plugin` para reglas de tests.
+- `eslint-plugin-import-x` cuando se acepten reglas de imports, ciclos e imports no resueltos.
+
+Si se requiere build distribuible o protegido:
+
+- `esbuild` para bundling backend ESM orientado a Node.
+- `terser` para minificación y eliminación controlada de `console.log`, `console.debug` y `console.trace`.
+- `javascript-obfuscator` solo para `build:protected`, no para desarrollo.
+
+Toda dependencia agregada debe quedar usada por configuración, scripts o código activo.
+
+### ESLint
+
+Usar `eslint.config.js` con flat config, ESM y reglas coherentes con servicios backend:
+
+- Incluir `pluginJs.configs.recommended`.
+- Configurar `globals.node`; agregar `globals.browser` solo si el servicio realmente lo requiere.
+- Mantener `ecmaVersion: 'latest'` y `sourceType: 'module'`.
+- Ignorar artefactos generados: `dist`, `dist-protected`, `coverage`, `tmp`, `.cache` y `node_modules`.
+- Mantener `no-unused-vars` en `error`, permitiendo argumentos con prefijo `_`.
+- Exigir `eqeqeq`, `no-undef`, `no-var`, `semi`, `quotes: single` y `prefer-const`.
+- Usar `no-console` estricto en runtime, permitiendo como mínimo `console.info`, `console.warn` y `console.error` solo donde el servicio lo necesite para bootstrap, conexiones o errores operativos.
+- Crear overrides para archivos de configuración, bootstrap y clientes de conexión cuando necesiten logs operativos.
+- Crear overrides para `*.test.js` y `*.spec.js` con globals de Vitest y reglas como `no-focused-tests`, `no-disabled-tests`, `expect-expect`, `prefer-to-have-length` y `prefer-lowercase-title`.
+- Si se usa `eslint-plugin-import-x`, activar `import-x/no-unresolved`, `import-x/no-cycle` e `import-x/no-self-import`.
+
+El script recomendado de lint debe usar cache:
+
+```json
+{
+  "lint": "eslint . --cache --cache-location .cache/eslint/",
+  "lint:watch": "node --watch --watch-path=src --watch-path=config --watch-path=eslint.config.js ./node_modules/eslint/bin/eslint.js . --cache --cache-location .cache/eslint/"
+}
+```
+
+### Vitest
+
+Usar Vitest para tests unitarios o de casos de uso. El script mínimo recomendado es:
+
+```json
+{
+  "test": "vitest run",
+  "test:watch": "vitest --watch"
+}
+```
+
+Agregar tests cuando el cambio toque validadores, parsers, reglas de negocio, errores esperados, contratos de casos de uso o regresiones.
+
+### Build backend
+
+Cuando el servicio requiera artefacto distribuible, agregar:
+
+```json
+{
+  "build": "node scripts/build.js",
+  "build:protected": "node scripts/build.js --obfuscate",
+  "start:dist": "node dist/app.js"
+}
+```
+
+El build estándar debe:
+
+- Generar `dist/app.js`.
+- Hacer bundle con `platform: 'node'`, `format: 'esm'` y target de Node compatible con el runtime del Dockerfile.
+- Mantener paquetes de producción como externos para que los resuelva `node_modules` en runtime.
+- No inyectar `process.env.NODE_ENV` como constante si eso cambia el comportamiento de importación en tests.
+- Minificar y remover `console.log`, `console.debug` y `console.trace`.
+- Mantener `console.info`, `console.warn` y `console.error` para señales operativas permitidas.
+- Generar un `package.json` mínimo dentro de `dist` con `type: 'module'` y dependencias de producción.
+
+El build protegido debe:
+
+- Generar `dist-protected/app.js`.
+- Reutilizar el mismo pipeline del build estándar.
+- Aplicar ofuscación moderada, compatible con Node, evitando opciones agresivas que rompan stack traces, arranque, rendimiento o debugging operativo.
+- No reemplazar controles de seguridad reales; la ofuscación solo dificulta lectura casual del artefacto.
+
+Agregar `dist/`, `dist-protected/` y `.cache/` a `.gitignore`. Agregar los mismos directorios a `.dockerignore`.
+
+### Docker multi-stage
+
+Para servicios backend Node.js, preferir Docker multi-stage:
+
+- Stage `build`: instalar devDependencies con `npm ci`, copiar el proyecto y ejecutar `npm run build` o `npm run build:protected`.
+- Stage `production`: instalar solo dependencias de producción con `npm ci --omit=dev`, copiar el artefacto desde `dist` hacia el runtime y ejecutar `node dist/app.js`.
+- Definir `NODE_ENV=production` en la imagen final.
+- Crear directorios runtime necesarios como `tmp`.
+- Ejecutar como usuario no root cuando la imagen base lo permita.
+- Exponer solo el puerto real del servicio.
+
+Si el Dockerfile debe soportar artefacto normal y protegido, usar `ARG BUILD_SCRIPT` y `ARG DIST_DIR` para seleccionar el pipeline:
+
+```bash
+docker build -t service:latest .
+docker build --build-arg BUILD_SCRIPT=build:protected --build-arg DIST_DIR=dist-protected -t service:protected .
+```
+
+Cuando se use Docker Linux desde Windows, validar que `package-lock.json` sea compatible con la versión de npm de la imagen base. Si `npm ci` falla por dependencias opcionales faltantes, regenerar el lockfile con una versión de npm compatible con la imagen, sin cambiar contratos del servicio.
+
 ## Comandos
 
 Usar los comandos definidos en `package.json` del repositorio concreto. Los más frecuentes:
@@ -281,7 +392,9 @@ Usar los comandos definidos en `package.json` del repositorio concreto. Los más
 - `npm run dev`: desarrollo local con watch y `.env.development`.
 - `npm run lint`: validación mínima antes de entregar cambios.
 - `npm test`: tests Vitest.
-- `npm run build`: build/ofuscación cuando aplique.
+- `npm run build`: build estándar cuando aplique.
+- `npm run build:protected`: build protegido/ofuscado cuando aplique.
+- `npm run check`: lint y tests cuando exista.
 
 Si el comando depende de servicios externos o variables reales, indicarlo al usuario si no puede ejecutarse.
 

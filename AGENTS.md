@@ -19,10 +19,13 @@ Antes de ejecutar cualquier tarea de analisis, diagnostico, edicion, refactor, p
 ## Reglas de comportamiento
 
 - Seguir la arquitectura y convenciones documentadas en `SKILL.md`.
+- Si se inicia un proyecto nuevo, inicializar Git localmente antes de comenzar el desarrollo.
 - Analizar antes de editar. No modificar codigo por suposicion si el patron puede verificarse en el repositorio.
 - Mantener la solucion simple, local al cambio y coherente con el modulo afectado.
 - No sobreingenierizar ni introducir abstracciones si el patron existente resuelve el problema.
 - No hacer refactors grandes sin presentar un plan y recibir confirmacion.
+- Para cualquier tarea, analizar si requiere plan de accion. Si implica mas de un punto de accion, presentar el plan, esperar ajustes o validacion del usuario, ejecutar punto por punto y crear un commit despues de cada punto completado.
+- Si la tarea es pequena y tiene un solo punto de accion, ejecutarla y crear un commit al terminar.
 - No cambiar contratos publicos de API REST, gRPC, payloads, respuestas, entidades, repositorios o variables de entorno sin declararlo explicitamente antes de actuar.
 - No modificar modelos de datos, schemas Zod, modelos Sequelize, schemas Mongoose, metadata de GridFS o prompts LLM sin explicar impacto en controladores, casos de uso, repositorios, clientes y consumidores.
 - No eliminar codigo sin buscar usos activos en el repositorio.
@@ -38,13 +41,15 @@ Antes de ejecutar cualquier tarea de analisis, diagnostico, edicion, refactor, p
 2. Ubicar el punto de entrada: router, contrato gRPC, controller, usecase, repository, cliente o config.
 3. Seguir la cadena completa del flujo afectado.
 4. Identificar contratos publicos y datos persistidos que puedan cambiar.
-5. Presentar un plan breve cuando el cambio sea amplio, ambiguo o toque contratos.
-6. Implementar respetando capas y nombres definidos en `SKILL.md`.
-7. Crear o usar validadores Zod cuando correspondan.
-8. Mantener respuestas HTTP con `fetchResponse`.
-9. Mantener errores esperados con `{ error }` en casos de uso y `CustomError` en controladores.
-10. Ejecutar validacion disponible: `npm run lint`, `npm test` y `npm run build` cuando aplique.
-11. Entregar resumen de cambios, pruebas ejecutadas y riesgos restantes.
+5. Determinar si la tarea tiene uno o varios puntos de accion.
+6. Si tiene varios puntos de accion, presentar el plan y esperar validacion o ajustes del usuario antes de editar.
+7. Implementar respetando capas y nombres definidos en `SKILL.md`.
+8. Crear o usar validadores Zod cuando correspondan.
+9. Mantener respuestas HTTP con `fetchResponse`.
+10. Mantener errores esperados con `{ error }` en casos de uso y `CustomError` en controladores.
+11. Ejecutar validacion disponible: `npm run lint`, `npm test` y `npm run build` cuando aplique.
+12. Crear commit despues de completar cada punto del plan, o un commit final si la tarea tenia un unico punto de accion.
+13. Entregar resumen de cambios, pruebas ejecutadas, commits creados y riesgos restantes.
 
 ## Arquitectura obligatoria
 
@@ -155,8 +160,10 @@ Si un comando requiere servicios externos, variables reales o bases de datos no 
 ## PR y commits
 
 - Mantener commits pequenos y enfocados.
-- Usar titulos breves, descriptivos e imperativos.
-- Conventional Commits son aceptables cuando aportan claridad, por ejemplo `feat: ...` o `fix: ...`.
+- Usar el formato obligatorio `VERBO :: DESCRIPCION CORTA`.
+- El verbo debe ser breve e imperativo o descriptivo, por ejemplo `fix`, `add`, `update`, `remove`, `refactor`, `docs`, `test`, `build` o `chore`.
+- Ejemplo valido: `fix :: validation password in auth`.
+- No usar Conventional Commits con `feat:`, `fix:` o formatos equivalentes si contradicen `VERBO :: DESCRIPCION CORTA`.
 - En PR o resumen final, incluir proposito, capas afectadas, pruebas ejecutadas y riesgos/contratos modificados.
 - Si no existe plantilla de PR o politica de ramas, no inventarla; preguntar si la tarea depende de eso.
 
