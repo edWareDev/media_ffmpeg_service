@@ -14,25 +14,26 @@
     "check": "npm run lint && npm test"
   },
   "dependencies": {
-    "bullmq": "^5.77.6",
-    "dotenv": "^17.4.2",
-    "express": "^5.2.1",
-    "ffmpeg-static": "^5.3.0",
-    "ffprobe-static": "^3.1.0",
-    "helmet": "^8.2.0",
-    "ioredis": "^5.11.0",
-    "mime-types": "^3.0.2",
-    "mongodb": "^7.2.0",
-    "mongoose": "^9.6.3",
-    "multer": "^2.1.1",
-    "nanoid": "^5.1.11",
-    "zod": "^4.4.3"
+    "bullmq": "5.77.6",
+    "dotenv": "17.4.2",
+    "express": "5.2.1",
+    "ffmpeg-static": "5.3.0",
+    "ffprobe-static": "3.1.0",
+    "helmet": "8.2.0",
+    "ioredis": "5.11.0",
+    "mime-types": "3.0.2",
+    "mongodb": "7.2.0",
+    "mongoose": "9.6.3",
+    "multer": "2.1.1",
+    "nanoid": "5.1.11",
+    "zod": "4.4.3"
   },
   "devDependencies": {
-    "@eslint/js": "^10.0.1",
-    "@vitest/eslint-plugin": "^1.6.18",
-    "eslint": "^10.4.1",
-    "globals": "^17.6.0",
-    "vitest": "^4.1.7"
+    "@eslint/js": "10.0.1",
+    "@vitest/eslint-plugin": "1.6.18",
+    "eslint": "10.4.1",
+    "eslint-plugin-import-x": "4.16.2",
+    "globals": "17.6.0",
+    "vitest": "4.1.7"
   }
 }

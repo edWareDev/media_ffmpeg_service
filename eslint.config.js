@@ -1,6 +1,7 @@
 import pluginVitest from '@vitest/eslint-plugin';
 import globals from 'globals';
 import pluginJs from '@eslint/js';
+import { flatConfigs as importXFlatConfigs } from 'eslint-plugin-import-x';
 
 /** @type {import('eslint').Linter.Config[]} */
 export default [
@@ -14,6 +15,7 @@ export default [
         ]
     },
     pluginJs.configs.recommended,
+    importXFlatConfigs.recommended,
     {
         files: ['**/*.js'],
         languageOptions: {
@@ -31,7 +33,7 @@ export default [
             vitest: pluginVitest
         },
         rules: {
-            'no-unused-vars': ['warn', { argsIgnorePattern: '^_' }],
+            'no-unused-vars': ['error', { argsIgnorePattern: '^_' }],
             eqeqeq: ['error', 'always'],
             'no-undef': 'error',
             'no-empty': ['warn', { allowEmptyCatch: true }],
@@ -40,6 +42,21 @@ export default [
             semi: ['error', 'always'],
             'no-shadow': 'warn',
             quotes: ['error', 'single', { avoidEscape: true }],
+            'no-console': ['error', { allow: ['info', 'warn', 'error'] }],
+            'import-x/no-unresolved': ['error', { commonjs: true }],
+            'import-x/no-cycle': ['error', { maxDepth: Infinity }],
+            'import-x/no-self-import': 'error'
+        }
+    },
+    {
+        files: [
+            'eslint.config.js',
+            'config/**/*.js',
+            'src/app.js',
+            'src/infrastructure/services/mongoDB.client.js',
+            'src/infrastructure/services/redis.client.js'
+        ],
+        rules: {
             'no-console': ['warn', { allow: ['info', 'warn', 'error'] }]
         }
     },
