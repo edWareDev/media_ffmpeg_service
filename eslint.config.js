@@ -53,7 +53,8 @@ export default [
         files: [
             'eslint.config.js',
             'config/**/*.js',
-            'src/app.js',
+            'src/main.js',
+            'src/bootstrap/**/*.js',
             'src/infrastructure/services/mongoDB.client.js',
             'src/infrastructure/services/redis.client.js'
         ],

@@ -20,7 +20,7 @@ await fs.rm(outDir, { recursive: true, force: true });
 await fs.mkdir(outDir, { recursive: true });
 
 await build({
-    entryPoints: [path.join(rootDir, 'src/app.js')],
+    entryPoints: [path.join(rootDir, 'src/main.js')],
     outfile: bundlePath,
     bundle: true,
     platform: 'node',

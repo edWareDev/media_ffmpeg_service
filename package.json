@@ -3,10 +3,10 @@
   "version": "1.0.0",
   "description": "API REST para procesamiento multimedia asíncrono con FFmpeg, GridFS y BullMQ.",
   "type": "module",
-  "main": "src/app.js",
+  "main": "src/main.js",
   "scripts": {
-    "start": "node src/app.js",
-    "dev": "node --watch src/app.js",
+    "start": "node src/main.js",
+    "dev": "node --watch src/main.js",
     "lint": "eslint . --cache --cache-location .cache/eslint/",
     "lint:watch": "node --watch --watch-path=src --watch-path=config --watch-path=eslint.config.js ./node_modules/eslint/bin/eslint.js . --cache --cache-location .cache/eslint/",
     "test": "vitest run",
