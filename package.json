@@ -7,8 +7,11 @@
   "scripts": {
     "start": "node src/app.js",
     "dev": "node --watch src/app.js",
-    "lint": "eslint .",
-    "test": "vitest run"
+    "lint": "eslint . --cache --cache-location .cache/eslint/",
+    "lint:watch": "node --watch --watch-path=src --watch-path=config --watch-path=eslint.config.js ./node_modules/eslint/bin/eslint.js . --cache --cache-location .cache/eslint/",
+    "test": "vitest run",
+    "test:watch": "vitest --watch",
+    "check": "npm run lint && npm test"
   },
   "dependencies": {
     "bullmq": "^5.77.6",
@@ -26,9 +29,9 @@
     "zod": "^4.4.3"
   },
   "devDependencies": {
-    "@eslint/js": "^9.28.0",
-    "eslint": "^9.28.0",
-    "globals": "^15.15.0",
+    "@eslint/js": "^10.0.1",
+    "eslint": "^10.4.1",
+    "globals": "^17.6.0",
     "vitest": "^4.1.7"
   }
 }
