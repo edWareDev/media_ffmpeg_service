@@ -1,6 +1,6 @@
 import { env } from '../config/env.js';
 import { app } from './app.js';
-import { createShutdownHandler } from './bootstrap/shutdown.js';
+import { createStopServerHandler } from './bootstrap/stopServer.js';
 import { startServer } from './bootstrap/startServer.js';
 import { mediaQueue } from './infrastructure/services/jobQueueService.js';
 import { connectMongoDB, disconnectMongoDB } from './infrastructure/services/mongoDB.client.js';
@@ -13,7 +13,7 @@ const resources = {
     mediaWorker: undefined
 };
 
-const shutdown = createShutdownHandler({
+const stopServer = createStopServerHandler({
     getResources: () => ({
         server: resources.server,
         workers: [resources.mediaWorker],
@@ -25,19 +25,19 @@ const shutdown = createShutdownHandler({
 
 const registerProcessHandlers = () => {
     process.once('SIGTERM', () => {
-        shutdown('SIGTERM');
+        stopServer('SIGTERM');
     });
     process.once('SIGINT', () => {
-        shutdown('SIGINT');
+        stopServer('SIGINT');
     });
     process.once('uncaughtException', (error) => {
         console.error('Excepción no controlada.', error.message);
-        shutdown('uncaughtException', 1);
+        stopServer('uncaughtException', 1);
     });
     process.once('unhandledRejection', (reason) => {
         const message = reason instanceof Error ? reason.message : String(reason);
         console.error('Promesa rechazada no controlada.', message);
-        shutdown('unhandledRejection', 1);
+        stopServer('unhandledRejection', 1);
     });
 };
 

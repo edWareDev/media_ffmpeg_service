@@ -83,6 +83,7 @@ Reglas de capa:
 - `src/app.js` no debe arrancar el servidor ni abrir conexiones persistentes cuando el proyecto tenga bootstrap separado.
 - `src/main.js`, `src/server.js` o `src/bootstrap/*` concentran arranque del proceso, conexiones, workers, llamadas a `startServer`, registro de señales y cierre controlado.
 - `startServer` debe encapsular el arranque del servidor de entrada y sus eventos de error como puerto ocupado o permisos insuficientes.
+- `stopServer.js` debe encapsular el cierre controlado del servidor y de los recursos persistentes.
 - El bootstrap debe conservar referencias a recursos abiertos y cerrarlos ordenadamente ante señales del proceso.
 - `src/adapters/routers` solo conecta rutas, middlewares de transporte y controladores.
 - `src/adapters/controllers` llama casos de uso, convierte errores y responde con `fetchResponse`.
@@ -158,6 +159,7 @@ No llamar bases de datos, GridFS, OpenRouter, Axios externo ni clientes de infra
 - Implementar cierre controlado en APIs backend que mantengan servidores, workers, colas, conexiones de base de datos, caches, schedulers, timers o clientes externos persistentes.
 - Separar la composicion de la aplicacion HTTP/API del arranque del proceso.
 - Usar un modulo reutilizable de arranque de servidor, por ejemplo `startServer({ app, port, logger })`, para manejar `listen`, logs operativos y errores de inicio.
+- Usar `stopServer.js` como modulo reutilizable de cierre controlado. No usar otros nombres para este helper en proyectos nuevos.
 - No acoplar `startServer` a un caso de uso de logs especifico salvo decision explicita del proyecto; preferir logger inyectable o generico.
 - Capturar `SIGTERM` y `SIGINT` en runtime normal.
 - Cerrar primero servidores de entrada para no aceptar trafico nuevo.

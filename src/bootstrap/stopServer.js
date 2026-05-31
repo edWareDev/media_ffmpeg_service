@@ -14,7 +14,7 @@ const closeHttpServer = (server) => new Promise((resolve, reject) => {
     });
 });
 
-export const createShutdownHandler = ({
+export const createStopServerHandler = ({
     getResources,
     logger = console,
     timeoutMs = 30000,
@@ -28,11 +28,11 @@ export const createShutdownHandler = ({
 
         logger.info(`Cerrando servicio por ${signal}.`);
 
-        const shutdownTimeout = setTimeout(() => {
+        const stopTimeout = setTimeout(() => {
             logger.error('No se pudo cerrar el servicio dentro del tiempo esperado.');
             exit(1);
         }, timeoutMs);
-        shutdownTimeout.unref();
+        stopTimeout.unref();
 
         const {
             server,
@@ -48,11 +48,11 @@ export const createShutdownHandler = ({
             await Promise.all(queues.map((queue) => queue?.close?.()));
             await Promise.all(clients.map((client) => client?.quit?.() || client?.close?.()));
             await Promise.all(databases.map((database) => database?.()));
-            clearTimeout(shutdownTimeout);
+            clearTimeout(stopTimeout);
             logger.info('Servicio cerrado correctamente.');
             exit(exitCode);
         } catch (error) {
-            clearTimeout(shutdownTimeout);
+            clearTimeout(stopTimeout);
             logger.error('Error durante el cierre del servicio.', error.message);
             exit(1);
         }

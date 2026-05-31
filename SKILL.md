@@ -57,7 +57,7 @@ Mantener las responsabilidades separadas:
 - `src/app.js`: composición de la aplicación HTTP/API, middlewares globales y montaje de routers. No debe arrancar el servidor ni abrir conexiones persistentes si el proyecto tiene bootstrap separado.
 - `src/main.js`, `src/server.js` o `src/bootstrap/*`: arranque del proceso, conexiones, workers, llamadas a `startServer`, registro de señales y cierre controlado.
 - `src/bootstrap/startServer.js`: arranque del servidor de entrada y manejo de eventos propios del listener, como `listening`, `EADDRINUSE`, `EACCES` y errores de inicio.
-- `src/bootstrap/shutdown.js`: cierre ordenado de servidores, workers, colas, clientes externos y bases de datos.
+- `src/bootstrap/stopServer.js`: cierre ordenado de servidores, workers, colas, clientes externos y bases de datos.
 - `src/adapters/routers`: rutas Express y middlewares de transporte como Multer.
 - `src/adapters/controllers`: traducción HTTP, llamada a casos de uso y respuesta con `fetchResponse`.
 - `src/adapters/gRPC`: traducción gRPC, streaming y códigos gRPC.
@@ -359,14 +359,14 @@ Separar responsabilidades de arranque:
 - La aplicación HTTP/API debe construirse en un módulo importable, normalmente `app.js`, sin hacer `listen` ni abrir conexiones persistentes.
 - El entrypoint del proceso, normalmente `main.js`, `server.js` o un módulo en `bootstrap`, debe conectar infraestructura, iniciar workers y llamar al arranque del servidor.
 - El arranque del servidor debe vivir en una función reutilizable como `startServer({ app, port, logger })`, que devuelva la instancia del servidor y maneje errores de inicio.
-- El cierre controlado debe vivir en una función reutilizable como `createShutdownHandler(...)` o `shutdown(...)`, recibiendo referencias a recursos abiertos.
+- El cierre controlado debe vivir en `src/bootstrap/stopServer.js`, con una función reutilizable como `createStopServerHandler(...)` o `stopServer(...)`, recibiendo referencias a recursos abiertos.
 - El logger de arranque debe ser genérico o inyectable. No acoplar `startServer` a un caso de uso concreto de logs salvo que el proyecto ya tenga esa decisión explícita.
 
 Reglas generales:
 
 - Guardar referencias a los recursos creados durante el arranque para poder cerrarlos después.
 - Registrar handlers para `SIGTERM` y `SIGINT` en runtime normal, no en tests.
-- Usar una función única de `shutdown` con protección contra doble ejecución.
+- Usar una función única de `stopServer` con protección contra doble ejecución.
 - Dejar de aceptar tráfico nuevo cerrando primero los servidores de entrada.
 - Cerrar después workers, consumidores, schedulers, colas, conexiones persistentes y bases de datos.
 - Esperar cierres asíncronos con `await`.
@@ -397,10 +397,10 @@ const resources = { server: undefined };
 
 resources.server = await startServer({ app, port });
 
-process.once('SIGTERM', () => shutdown('SIGTERM'));
-process.once('SIGINT', () => shutdown('SIGINT'));
-process.once('uncaughtException', () => shutdown('uncaughtException', 1));
-process.once('unhandledRejection', () => shutdown('unhandledRejection', 1));
+process.once('SIGTERM', () => stopServer('SIGTERM'));
+process.once('SIGINT', () => stopServer('SIGINT'));
+process.once('uncaughtException', () => stopServer('uncaughtException', 1));
+process.once('unhandledRejection', () => stopServer('unhandledRejection', 1));
 ```
 
 ## Tooling de desarrollo backend
