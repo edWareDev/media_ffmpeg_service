@@ -54,7 +54,10 @@ gRPC client
 
 Mantener las responsabilidades separadas:
 
-- `src/app.js`: bootstrap, middlewares globales, routers, conexiones y arranque.
+- `src/app.js`: composición de la aplicación HTTP/API, middlewares globales y montaje de routers. No debe arrancar el servidor ni abrir conexiones persistentes si el proyecto tiene bootstrap separado.
+- `src/main.js`, `src/server.js` o `src/bootstrap/*`: arranque del proceso, conexiones, workers, llamadas a `startServer`, registro de señales y cierre controlado.
+- `src/bootstrap/startServer.js`: arranque del servidor de entrada y manejo de eventos propios del listener, como `listening`, `EADDRINUSE`, `EACCES` y errores de inicio.
+- `src/bootstrap/shutdown.js`: cierre ordenado de servidores, workers, colas, clientes externos y bases de datos.
 - `src/adapters/routers`: rutas Express y middlewares de transporte como Multer.
 - `src/adapters/controllers`: traducción HTTP, llamada a casos de uso y respuesta con `fetchResponse`.
 - `src/adapters/gRPC`: traducción gRPC, streaming y códigos gRPC.
@@ -136,7 +139,7 @@ Usar esta forma como referencia, ajustándola al servicio real:
 11. Convertir resultados `{ error }` a `CustomError` cuando aplique.
 12. Responder siempre con `fetchResponse` en controladores REST nuevos.
 13. Registrar la ruta en `src/adapters/routers`.
-14. Montar el router en `src/app.js` si es un recurso nuevo.
+14. Montar el router en `src/app.js` o en el módulo de composición HTTP/API equivalente si es un recurso nuevo.
 15. Montar siempre `logsRouter` cuando exista el módulo de logs del servicio. Si los logs no deben ser públicos, proteger la ruta con middleware o restringirla por configuración, pero no dejar el router desconectado.
 16. Para gRPC, actualizar primero `proto/*.proto`, luego `src/adapters/gRPC/*Service.js`, y finalmente el registro del servidor gRPC.
 17. Ejecutar `npm run lint` antes de cerrar. Ejecutar `npm test` si hay tests o se agregaron tests.
@@ -351,6 +354,14 @@ Variables comunes observadas:
 
 Todo backend API que mantenga recursos abiertos debe implementar cierre controlado desde el bootstrap principal. Esto aplica a servidores HTTP, servidores gRPC, workers, consumidores, colas, conexiones de base de datos, caches, clientes externos persistentes, timers, schedulers, streams y cualquier otro recurso que mantenga vivo el proceso.
 
+Separar responsabilidades de arranque:
+
+- La aplicación HTTP/API debe construirse en un módulo importable, normalmente `app.js`, sin hacer `listen` ni abrir conexiones persistentes.
+- El entrypoint del proceso, normalmente `main.js`, `server.js` o un módulo en `bootstrap`, debe conectar infraestructura, iniciar workers y llamar al arranque del servidor.
+- El arranque del servidor debe vivir en una función reutilizable como `startServer({ app, port, logger })`, que devuelva la instancia del servidor y maneje errores de inicio.
+- El cierre controlado debe vivir en una función reutilizable como `createShutdownHandler(...)` o `shutdown(...)`, recibiendo referencias a recursos abiertos.
+- El logger de arranque debe ser genérico o inyectable. No acoplar `startServer` a un caso de uso concreto de logs salvo que el proyecto ya tenga esa decisión explícita.
+
 Reglas generales:
 
 - Guardar referencias a los recursos creados durante el arranque para poder cerrarlos después.
@@ -368,31 +379,23 @@ Reglas generales:
 Esquema recomendado:
 
 ```js
-let server;
-let isShuttingDown = false;
+export const startServer = ({ app, port, logger = console }) => new Promise((resolve, reject) => {
+    const server = app.listen(port, () => {
+        logger.info(`Servidor iniciado en puerto ${port}.`);
+        resolve(server);
+    });
 
-const shutdown = async (reason, exitCode = 0) => {
-    if (isShuttingDown) return;
-    isShuttingDown = true;
+    server.on('error', (error) => {
+        logger.error(`Error al iniciar el servidor: ${error.message}`);
+        reject(error);
+    });
+});
+```
 
-    const timeout = setTimeout(() => {
-        process.exit(1);
-    }, 30000);
-    timeout.unref();
+```js
+const resources = { server: undefined };
 
-    try {
-        await closeHttpServer(server);
-        await closeWorkers();
-        await closeQueues();
-        await closeExternalClients();
-        await closeDatabases();
-        clearTimeout(timeout);
-        process.exit(exitCode);
-    } catch {
-        clearTimeout(timeout);
-        process.exit(1);
-    }
-};
+resources.server = await startServer({ app, port });
 
 process.once('SIGTERM', () => shutdown('SIGTERM'));
 process.once('SIGINT', () => shutdown('SIGINT'));
@@ -474,7 +477,7 @@ Cuando el servicio requiera artefacto distribuible, agregar:
 
 El build estándar debe:
 
-- Generar `dist/app.js`.
+- Generar un artefacto ejecutable en `dist`, normalmente `dist/app.js` por compatibilidad de despliegue, aunque el entrypoint fuente sea `src/main.js` o equivalente.
 - Hacer bundle con `platform: 'node'`, `format: 'esm'` y target de Node compatible con el runtime del Dockerfile.
 - Mantener paquetes de producción como externos para que los resuelva `node_modules` en runtime.
 - No inyectar `process.env.NODE_ENV` como constante si eso cambia el comportamiento de importación en tests.
@@ -496,7 +499,7 @@ Agregar `dist/`, `dist-protected/` y `.cache/` a `.gitignore`. Agregar los mismo
 Para servicios backend Node.js, preferir Docker multi-stage:
 
 - Stage `build`: instalar devDependencies con `npm ci`, copiar el proyecto y ejecutar `npm run build` o `npm run build:protected`.
-- Stage `production`: instalar solo dependencias de producción con `npm ci --omit=dev`, copiar el artefacto desde `dist` hacia el runtime y ejecutar `node dist/app.js`.
+- Stage `production`: instalar solo dependencias de producción con `npm ci --omit=dev`, copiar el artefacto desde `dist` hacia el runtime y ejecutar el entrypoint generado.
 - Definir `NODE_ENV=production` en la imagen final.
 - Crear directorios runtime necesarios como `tmp`.
 - Ejecutar como usuario no root cuando la imagen base lo permita.
@@ -532,7 +535,7 @@ Tratar estas inconsistencias como señales a revisar, no como reglas a propagar:
 
 - Uso de nombres alternativos para códigos HTTP. Estandarizar hacia `HTTP_CODES.js`.
 - Imports a repositorios inexistentes como `LogRepositoryImpl.js`. Estandarizar hacia `SystemLogRepositoryImpl.js`.
-- `logsRouter` presente pero no montado en `src/app.js`. Montarlo siempre cuando exista módulo de logs.
+- `logsRouter` presente pero no montado en el módulo de composición HTTP/API. Montarlo siempre cuando exista módulo de logs.
 - Mezcla de nombres de routers: estandarizar `*Router.js` para padres/generales y `*.route.js` para hijos/pequeños.
 - Mezcla de nombres de controladores: estandarizar `<action><Resource>Controller`.
 - Carpeta `infraestructure` con typo. Estandarizar hacia `infrastructure` actualizando imports.
