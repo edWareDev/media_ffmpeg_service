@@ -1,7 +1,7 @@
 import { CustomError } from '../../utils/CustomError.js';
 import { ERROR_CODES } from '../../utils/error_codes.js';
 import { fetchResponse } from '../../utils/fetchResponse.js';
-import { HTTP_CODES } from '../../utils/http_error_codes.js';
+import { HTTP_CODES } from '../../utils/HTTP_CODES.js';
 
 const statusByError = {
     [ERROR_CODES.MEDIA_NOT_FOUND]: HTTP_CODES._404_NOT_FOUND,

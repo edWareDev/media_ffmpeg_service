@@ -4,7 +4,7 @@ import { getArtifactById } from '../../usecases/artifacts/GetArtifactById.js';
 import { getArtifactChildren } from '../../usecases/artifacts/GetArtifactChildren.js';
 import { getArtifactJobs } from '../../usecases/artifacts/GetArtifactJobs.js';
 import { fetchResponse } from '../../utils/fetchResponse.js';
-import { HTTP_CODES } from '../../utils/http_error_codes.js';
+import { HTTP_CODES } from '../../utils/HTTP_CODES.js';
 import { handleControllerError, throwIfError } from './controllerHelpers.js';
 
 export {

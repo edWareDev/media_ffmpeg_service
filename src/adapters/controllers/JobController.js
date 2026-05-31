@@ -4,7 +4,7 @@ import { getJobs } from '../../usecases/jobs/GetJobs.js';
 import { cancelJob } from '../../usecases/jobs/CancelJob.js';
 import { retryJob } from '../../usecases/jobs/RetryJob.js';
 import { fetchResponse } from '../../utils/fetchResponse.js';
-import { HTTP_CODES } from '../../utils/http_error_codes.js';
+import { HTTP_CODES } from '../../utils/HTTP_CODES.js';
 import { handleControllerError, throwIfError } from './controllerHelpers.js';
 
 export const createJobController = async (req, res) => {

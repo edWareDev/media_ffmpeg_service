@@ -8,7 +8,7 @@ import { deleteMedia } from '../../usecases/media/DeleteMedia.js';
 import { downloadMedia } from '../../usecases/media/DownloadMedia.js';
 import { removeFileIfExists } from '../../utils/fileSystem.js';
 import { fetchResponse } from '../../utils/fetchResponse.js';
-import { HTTP_CODES } from '../../utils/http_error_codes.js';
+import { HTTP_CODES } from '../../utils/HTTP_CODES.js';
 import { handleControllerError, throwIfError } from './controllerHelpers.js';
 
 export const uploadMediaController = async (req, res) => {

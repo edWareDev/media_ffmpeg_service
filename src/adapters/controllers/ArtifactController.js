@@ -1,7 +1,7 @@
 import { deleteArtifact } from '../../usecases/artifacts/DeleteArtifact.js';
 import { downloadArtifact } from '../../usecases/artifacts/DownloadArtifact.js';
 import { fetchResponse } from '../../utils/fetchResponse.js';
-import { HTTP_CODES } from '../../utils/http_error_codes.js';
+import { HTTP_CODES } from '../../utils/HTTP_CODES.js';
 import { handleControllerError, throwIfError } from './controllerHelpers.js';
 
 export const downloadArtifactController = async (req, res) => {

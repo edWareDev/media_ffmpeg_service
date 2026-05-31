@@ -10,7 +10,7 @@ import {
 } from './MediaController.js';
 import { getMediaJobs } from '../../usecases/media/GetMediaJobs.js';
 import { fetchResponse } from '../../utils/fetchResponse.js';
-import { HTTP_CODES } from '../../utils/http_error_codes.js';
+import { HTTP_CODES } from '../../utils/HTTP_CODES.js';
 import { handleControllerError, throwIfError } from './controllerHelpers.js';
 
 export {

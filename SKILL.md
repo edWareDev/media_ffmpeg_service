@@ -66,7 +66,7 @@ Mantener las responsabilidades separadas:
 - `src/domain/repositories`: repositorios concretos que encapsulan persistencia.
 - `src/infrastructure/services`: conexiones, clientes HTTP, clientes LLM, SQLite, MongoDB u otros servicios externos.
 - `src/prompts`: builders de prompts cuando el servicio usa LLM.
-- `src/utils`: utilidades transversales como `CustomError`, `http_error_codes.js`, `fetchResponse`, parsing y strings.
+- `src/utils`: utilidades transversales como `CustomError`, `HTTP_CODES.js`, `fetchResponse`, parsing y strings.
 - `config`: variables de entorno, constantes de runtime, puertos, conexiones y singletons de estado/configuración.
 
 Usar `infrastructure` como nombre estándar de carpeta. Si un proyecto legacy usa `infraestructure`, corregirlo en una tarea coordinada actualizando todos los imports afectados.
@@ -111,7 +111,9 @@ Usar esta forma como referencia, ajustándola al servicio real:
 - Usar controladores en PascalCase con sufijo `Controller`: `FilesController.js`, `ChatsController.js`, `IAController.js`.
 - Usar clases y entidades en PascalCase: `CustomError`, `SystemLog`, `SystemConfig`.
 - Usar constantes y variables de entorno en UPPER_SNAKE_CASE: `HTTP_CODES`, `MONGODB_CNX_STR`, `OPENROUTER_API_KEY`.
-- Usar `http_error_codes.js` como archivo estándar para códigos HTTP. Exportar desde ahí `HTTP_CODES` si el proyecto ya usa ese identificador.
+- Usar siempre `src/utils/HTTP_CODES.js` como archivo estándar para códigos HTTP.
+- Exportar desde `HTTP_CODES.js` una constante nombrada `HTTP_CODES`.
+- Usar los códigos de error correspondientes en controladores y middlewares; no responder todo con `400` o `500` si existe un código más preciso como `401`, `403`, `404`, `409`, `415`, `422` o `429`.
 - Usar `*Router.js` para routers padre o generales que montan grupos completos.
 - Usar `*.route.js` para rutas hijas, pequeñas o específicas de un recurso.
 - Usar nombres de controladores claros con sufijo `Controller`, orientados a acción y recurso: `createChatController`, `getFilesController`, `streamMediaController`, `getSystemLogsController`.
@@ -189,6 +191,78 @@ Reglas:
 - En gRPC, usar códigos gRPC y `call.destroy` o callbacks según el patrón local.
 - No filtrar detalles sensibles de infraestructura al cliente.
 - Mantener mensajes de usuario en español cuando el proyecto ya lo hace.
+
+### Códigos HTTP
+
+El archivo estándar debe ser `src/utils/HTTP_CODES.js` y su contenido base debe mantener esta forma:
+
+```js
+export const HTTP_CODES = {
+
+    _100_CONTINUE: 100,
+    _101_SWITCHING_PROTOCOLS: 101,
+    _102_PROCESSING: 102,
+    _103_EARLY_HINTS: 103,
+
+    _200_OK: 200,
+    _201_CREATED: 201,
+    _202_ACCEPTED: 202,
+    _203_NON_AUTHORITATIVE_INFORMATION: 203,
+    _204_NO_CONTENT: 204,
+    _205_RESET_CONTENT: 205,
+    _206_PARTIAL_CONTENT: 206,
+
+    _300_MULTIPLE_CHOICES: 300,
+    _301_MOVED_PERMANENTLY: 301,
+    _302_FOUND: 302,
+    _303_SEE_OTHER: 303,
+    _304_NOT_MODIFIED: 304,
+    _307_TEMPORARY_REDIRECT: 307,
+    _308_PERMANENT_REDIRECT: 308,
+
+    _400_BAD_REQUEST: 400,
+    _401_UNAUTHORIZED: 401,
+    _402_PAYMENT_REQUIRED: 402,
+    _403_FORBIDDEN: 403,
+    _404_NOT_FOUND: 404,
+    _405_METHOD_NOT_ALLOWED: 405,
+    _406_NOT_ACCEPTABLE: 406,
+    _407_PROXY_AUTHENTICATION_REQUIRED: 407,
+    _408_REQUEST_TIMEOUT: 408,
+    _409_CONFLICT: 409,
+    _410_GONE: 410,
+    _411_LENGTH_REQUIRED: 411,
+    _412_PRECONDITION_FAILED: 412,
+    _413_PAYLOAD_TOO_LARGE: 413,
+    _414_URI_TOO_LONG: 414,
+    _415_UNSUPPORTED_MEDIA_TYPE: 415,
+    _416_RANGE_NOT_SATISFIABLE: 416,
+    _417_EXPECTATION_FAILED: 417,
+    _418_IM_A_TEAPOT: 418,
+    _421_MISDIRECTED_REQUEST: 421,
+    _422_UNPROCESSABLE_ENTITY: 422,
+    _423_LOCKED: 423,
+    _424_FAILED_DEPENDENCY: 424,
+    _425_TOO_EARLY: 425,
+    _426_UPGRADE_REQUIRED: 426,
+    _428_PRECONDITION_REQUIRED: 428,
+    _429_TOO_MANY_REQUESTS: 429,
+    _431_REQUEST_HEADER_FIELDS_TOO_LARGE: 431,
+    _451_UNAVAILABLE_FOR_LEGAL_REASONS: 451,
+
+    _500_INTERNAL_SERVER_ERROR: 500,
+    _501_NOT_IMPLEMENTED: 501,
+    _502_BAD_GATEWAY: 502,
+    _503_SERVICE_UNAVAILABLE: 503,
+    _504_GATEWAY_TIMEOUT: 504,
+    _505_HTTP_VERSION_NOT_SUPPORTED: 505,
+    _506_VARIANT_ALSO_NEGOTIATES: 506,
+    _507_INSUFFICIENT_STORAGE: 507,
+    _508_LOOP_DETECTED: 508,
+    _510_NOT_EXTENDED: 510,
+    _511_NETWORK_AUTHENTICATION_REQUIRED: 511,
+};
+```
 
 ## Validación
 
@@ -402,7 +476,7 @@ Si el comando depende de servicios externos o variables reales, indicarlo al usu
 
 Tratar estas inconsistencias como señales a revisar, no como reglas a propagar:
 
-- Uso de `HTTP_CODES.js` como archivo único de códigos HTTP. Estandarizar hacia `http_error_codes.js`.
+- Uso de nombres alternativos para códigos HTTP. Estandarizar hacia `HTTP_CODES.js`.
 - Imports a repositorios inexistentes como `LogRepositoryImpl.js`. Estandarizar hacia `SystemLogRepositoryImpl.js`.
 - `logsRouter` presente pero no montado en `src/app.js`. Montarlo siempre cuando exista módulo de logs.
 - Mezcla de nombres de routers: estandarizar `*Router.js` para padres/generales y `*.route.js` para hijos/pequeños.

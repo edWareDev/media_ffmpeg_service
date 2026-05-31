@@ -1,6 +1,6 @@
 import express from 'express';
 import { fetchResponse } from '../../utils/fetchResponse.js';
-import { HTTP_CODES } from '../../utils/http_error_codes.js';
+import { HTTP_CODES } from '../../utils/HTTP_CODES.js';
 
 export const healthRouter = express.Router();
 

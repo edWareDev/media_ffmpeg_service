@@ -1,7 +1,7 @@
 import multer from 'multer';
 import { fetchResponse } from '../../../utils/fetchResponse.js';
 import { ERROR_CODES } from '../../../utils/error_codes.js';
-import { HTTP_CODES } from '../../../utils/http_error_codes.js';
+import { HTTP_CODES } from '../../../utils/HTTP_CODES.js';
 
 export const errorMiddleware = (error, req, res, next) => {
     if (res.headersSent) {

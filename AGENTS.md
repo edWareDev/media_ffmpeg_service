@@ -95,7 +95,9 @@ No llamar bases de datos, GridFS, OpenRouter, Axios externo ni clientes de infra
 - Usar ESM con imports relativos y extension `.js`.
 - Usar named exports.
 - Usar `src/infrastructure/services`; si existe `src/infraestructure`, migrar con refactor coordinado de imports.
-- Usar `src/utils/http_error_codes.js` como archivo estandar de codigos HTTP.
+- Usar siempre `src/utils/HTTP_CODES.js` como archivo estandar de codigos HTTP.
+- Exportar `HTTP_CODES` desde `HTTP_CODES.js` y usar los codigos correspondientes en controladores y middlewares al desarrollar funciones.
+- No usar codigos HTTP literales en controladores si existe una constante equivalente en `HTTP_CODES`.
 - Usar `SystemLogRepositoryImpl.js` como repositorio estandar de logs.
 - Montar siempre `logsRouter` cuando exista modulo de logs. Si requiere proteccion, agregar middleware o restriccion por configuracion.
 - Usar `*Router.js` para routers padre o generales.
