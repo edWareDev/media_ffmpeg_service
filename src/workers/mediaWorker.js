@@ -9,20 +9,7 @@ import { MediaRepositoryImpl } from '../domain/repositories/MediaRepositoryImpl.
 import { ArtifactRepositoryImpl } from '../domain/repositories/ArtifactRepositoryImpl.js';
 import { JobRepositoryImpl } from '../domain/repositories/JobRepositoryImpl.js';
 import { removeFileIfExists } from '../utils/fileSystem.js';
-
-const artifactTypeByJobType = {
-    'audio.transcode': 'audio_transcoded',
-    'audio.chunk': 'audio_chunk',
-    'audio.normalize': 'audio_normalized',
-    'audio.removeSilence': 'audio_silence_removed',
-    'video.extractAudio': 'audio_extract',
-    'video.transcode': 'video_transcoded',
-    'video.compress': 'video_compressed',
-    'video.split': 'video_segment',
-    'video.extractFrames': 'frame',
-    'video.detectScenes': 'scene_detection',
-    'video.generateThumbnails': 'thumbnail'
-};
+import { JOB_OUTPUT_ARTIFACT_TYPES } from '../../config/mediaConstants.js';
 
 const processors = {
     'media.extractMetadata': null,
@@ -161,7 +148,7 @@ export const startMediaWorker = () => new Worker(
             outputPaths.push(...generated);
 
             await JobRepositoryImpl.updateById(jobId, { progress: 75, currentStep: 'saving_artifacts' });
-            const artifactType = artifactTypeByJobType[type];
+            const artifactType = JOB_OUTPUT_ARTIFACT_TYPES[type];
             const artifacts = [];
             for (const [index, output] of outputPaths.entries()) {
                 artifacts.push(await createArtifactFromOutput({
