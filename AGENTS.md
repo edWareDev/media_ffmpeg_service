@@ -34,6 +34,7 @@ Antes de ejecutar cualquier tarea de analisis, diagnostico, edicion, refactor, p
 - No registrar secretos, API keys, tokens, credenciales, cadenas de conexion, headers `authorization`, buffers, chunks ni payloads completos.
 - Si una decision afecta arquitectura, datos, seguridad, rendimiento, mantenibilidad o contratos externos, pausar y preguntar.
 - Si una inconsistencia ya tiene decision definida en `SKILL.md`, aplicar la decision sin volver a preguntar.
+- En todo backend API con recursos persistentes, asegurar cierre controlado para señales del proceso, especialmente `SIGTERM` y `SIGINT`.
 
 ## Flujo de trabajo minimo
 
@@ -47,9 +48,10 @@ Antes de ejecutar cualquier tarea de analisis, diagnostico, edicion, refactor, p
 8. Crear o usar validadores Zod cuando correspondan.
 9. Mantener respuestas HTTP con `fetchResponse`.
 10. Mantener errores esperados con `{ error }` en casos de uso y `CustomError` en controladores.
-11. Ejecutar validacion disponible: `npm run lint`, `npm test` y `npm run build` cuando aplique.
-12. Crear commit despues de completar cada punto del plan, o un commit final si la tarea tenia un unico punto de accion.
-13. Entregar resumen de cambios, pruebas ejecutadas, commits creados y riesgos restantes.
+11. Si el cambio crea o modifica bootstrap, servidores, workers, colas, schedulers, conexiones persistentes o clientes externos, revisar e implementar cierre controlado.
+12. Ejecutar validacion disponible: `npm run lint`, `npm test` y `npm run build` cuando aplique.
+13. Crear commit despues de completar cada punto del plan, o un commit final si la tarea tenia un unico punto de accion.
+14. Entregar resumen de cambios, pruebas ejecutadas, commits creados y riesgos restantes.
 
 ## Arquitectura obligatoria
 
@@ -78,6 +80,7 @@ proto/*.proto
 Reglas de capa:
 
 - `src/app.js` concentra bootstrap, middlewares globales, montaje de routers, conexiones y arranque.
+- `src/app.js` o el bootstrap equivalente debe conservar referencias a recursos abiertos y cerrarlos ordenadamente ante señales del proceso.
 - `src/adapters/routers` solo conecta rutas, middlewares de transporte y controladores.
 - `src/adapters/controllers` llama casos de uso, convierte errores y responde con `fetchResponse`.
 - `src/usecases/<domain>` contiene logica de aplicacion, validacion y orquestacion.
@@ -146,6 +149,17 @@ No llamar bases de datos, GridFS, OpenRouter, Axios externo ni clientes de infra
 - No imprimir headers `authorization`.
 - No imprimir payloads completos, buffers o chunks.
 - Si se detecta filtracion existente, reportarla. Corregirla solo si entra en el alcance de la tarea o el usuario lo solicita.
+
+## Ciclo de vida del proceso
+
+- Implementar cierre controlado en APIs backend que mantengan servidores, workers, colas, conexiones de base de datos, caches, schedulers, timers o clientes externos persistentes.
+- Capturar `SIGTERM` y `SIGINT` en runtime normal.
+- Cerrar primero servidores de entrada para no aceptar trafico nuevo.
+- Cerrar luego workers, consumidores, colas, conexiones persistentes y bases de datos.
+- Proteger el cierre contra doble ejecucion.
+- Usar timeout maximo de apagado para evitar procesos colgados.
+- No registrar secretos ni payloads durante el apagado.
+- En `uncaughtException` y `unhandledRejection`, registrar el error de forma segura y disparar cierre controlado con codigo de salida de error.
 
 ## Comandos
 

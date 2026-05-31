@@ -347,6 +347,59 @@ Variables comunes observadas:
 - Toda dependencia declarada en `package.json` debe tener uso real en código activo. Si una dependencia no se importa o no se usa, eliminarla. No mantener dependencias solo "por si acaso".
 - Agregar tests Vitest cuando el cambio toque parsers, validadores, reglas de negocio, errores o regresiones.
 
+## Ciclo de vida y cierre controlado
+
+Todo backend API que mantenga recursos abiertos debe implementar cierre controlado desde el bootstrap principal. Esto aplica a servidores HTTP, servidores gRPC, workers, consumidores, colas, conexiones de base de datos, caches, clientes externos persistentes, timers, schedulers, streams y cualquier otro recurso que mantenga vivo el proceso.
+
+Reglas generales:
+
+- Guardar referencias a los recursos creados durante el arranque para poder cerrarlos después.
+- Registrar handlers para `SIGTERM` y `SIGINT` en runtime normal, no en tests.
+- Usar una función única de `shutdown` con protección contra doble ejecución.
+- Dejar de aceptar tráfico nuevo cerrando primero los servidores de entrada.
+- Cerrar después workers, consumidores, schedulers, colas, conexiones persistentes y bases de datos.
+- Esperar cierres asíncronos con `await`.
+- Definir un timeout máximo de apagado y forzar salida si el cierre queda bloqueado.
+- Usar logs operativos breves sin secretos, payloads, buffers ni cadenas de conexión.
+- Cerrar con código `0` para señales normales y código `1` para errores no recuperables.
+- Registrar `uncaughtException` y `unhandledRejection` solo para loguear y disparar cierre controlado; no continuar ejecutando el proceso como si estuviera sano.
+- Evitar efectos secundarios innecesarios al importar módulos. Crear conexiones, servidores, colas y workers desde funciones explícitas de arranque, no en import-time, cuando el diseño del servicio lo permita.
+
+Esquema recomendado:
+
+```js
+let server;
+let isShuttingDown = false;
+
+const shutdown = async (reason, exitCode = 0) => {
+    if (isShuttingDown) return;
+    isShuttingDown = true;
+
+    const timeout = setTimeout(() => {
+        process.exit(1);
+    }, 30000);
+    timeout.unref();
+
+    try {
+        await closeHttpServer(server);
+        await closeWorkers();
+        await closeQueues();
+        await closeExternalClients();
+        await closeDatabases();
+        clearTimeout(timeout);
+        process.exit(exitCode);
+    } catch {
+        clearTimeout(timeout);
+        process.exit(1);
+    }
+};
+
+process.once('SIGTERM', () => shutdown('SIGTERM'));
+process.once('SIGINT', () => shutdown('SIGINT'));
+process.once('uncaughtException', () => shutdown('uncaughtException', 1));
+process.once('unhandledRejection', () => shutdown('unhandledRejection', 1));
+```
+
 ## Tooling de desarrollo backend
 
 Para proyectos backend Node.js ESM, configurar tooling moderno desde el inicio y mantenerlo compatible con el flujo por capas del servicio.
@@ -448,6 +501,7 @@ Para servicios backend Node.js, preferir Docker multi-stage:
 - Crear directorios runtime necesarios como `tmp`.
 - Ejecutar como usuario no root cuando la imagen base lo permita.
 - Exponer solo el puerto real del servicio.
+- Asegurar que el proceso maneje `SIGTERM` con cierre controlado, porque Docker y orquestadores lo usan para detener contenedores.
 
 Si el Dockerfile debe soportar artefacto normal y protegido, usar `ARG BUILD_SCRIPT` y `ARG DIST_DIR` para seleccionar el pipeline:
 
