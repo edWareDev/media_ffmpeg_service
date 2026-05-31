@@ -11,7 +11,10 @@
     "lint:watch": "node --watch --watch-path=src --watch-path=config --watch-path=eslint.config.js ./node_modules/eslint/bin/eslint.js . --cache --cache-location .cache/eslint/",
     "test": "vitest run",
     "test:watch": "vitest --watch",
-    "check": "npm run lint && npm test"
+    "check": "npm run lint && npm test",
+    "build": "node scripts/build.js",
+    "build:protected": "node scripts/build.js --obfuscate",
+    "start:dist": "node dist/app.js"
   },
   "dependencies": {
     "bullmq": "5.77.6",
@@ -31,9 +34,12 @@
   "devDependencies": {
     "@eslint/js": "10.0.1",
     "@vitest/eslint-plugin": "1.6.18",
+    "esbuild": "0.28.0",
     "eslint": "10.4.1",
     "eslint-plugin-import-x": "4.16.2",
     "globals": "17.6.0",
+    "javascript-obfuscator": "5.4.3",
+    "terser": "5.48.0",
     "vitest": "4.1.7"
   }
 }

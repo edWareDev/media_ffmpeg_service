@@ -7,11 +7,12 @@ import { flatConfigs as importXFlatConfigs } from 'eslint-plugin-import-x';
 export default [
     {
         ignores: [
-            'coverage/**',
-            'dist/**',
-            'node_modules/**',
-            'tmp/**',
-            '.cache/**'
+            '**/coverage/**',
+            '**/dist/**',
+            '**/dist-protected/**',
+            '**/node_modules/**',
+            '**/tmp/**',
+            '**/.cache/**'
         ]
     },
     pluginJs.configs.recommended,
