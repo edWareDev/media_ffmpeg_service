@@ -26,6 +26,15 @@ export const validateMedia = async (mediaId, body) => {
     if (rules.allowedContainers?.length && metadata.container && !rules.allowedContainers.includes(metadata.container)) {
         failures.push({ rule: 'allowedContainers', message: 'Contenedor no permitido.' });
     }
+    if (rules.allowedVideoCodecs?.length && metadata.codec && media.mediaType === 'video' && !rules.allowedVideoCodecs.includes(metadata.codec)) {
+        failures.push({ rule: 'allowedVideoCodecs', message: 'Codec de video no permitido.' });
+    }
+    if (rules.allowedAudioCodecs?.length && metadata.codec && media.mediaType === 'audio' && !rules.allowedAudioCodecs.includes(metadata.codec)) {
+        failures.push({ rule: 'allowedAudioCodecs', message: 'Codec de audio no permitido.' });
+    }
+    if (rules.requireAudio && !metadata.channels && !metadata.sampleRate && media.mediaType !== 'audio') {
+        failures.push({ rule: 'requireAudio', message: 'El archivo no tiene metadata de audio.' });
+    }
     if (rules.maxResolution && metadata.width && metadata.height) {
         const [maxWidth, maxHeight] = rules.maxResolution.split('x').map(Number);
         if (metadata.width > maxWidth || metadata.height > maxHeight) {

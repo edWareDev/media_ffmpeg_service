@@ -5,6 +5,7 @@ import { ArtifactRepositoryImpl } from '../../domain/repositories/ArtifactReposi
 import { ERROR_CODES } from '../../utils/error_codes.js';
 import { validateSchema } from '../../utils/validateSchema.js';
 import { createJobSchema } from '../../adapters/web/validators/jobValidators.js';
+import { validateJobSourceCompatibility } from './ValidateJobSourceCompatibility.js';
 
 export const createJob = async (payload) => {
     const validation = validateSchema(createJobSchema, payload);
@@ -17,10 +18,16 @@ export const createJob = async (payload) => {
         const artifact = await ArtifactRepositoryImpl.findById(sourceId);
         if (!artifact) return { error: ERROR_CODES.ARTIFACT_NOT_FOUND };
         mediaId = artifact.mediaId;
+        const compatibility = validateJobSourceCompatibility({ type: validation.data.type, artifact });
+        if (compatibility.error) return compatibility;
     }
 
     const media = await MediaRepositoryImpl.findById(mediaId);
     if (!media) return { error: ERROR_CODES.MEDIA_NOT_FOUND };
+    if (validation.data.sourceType === 'media') {
+        const compatibility = validateJobSourceCompatibility({ type: validation.data.type, media });
+        if (compatibility.error) return compatibility;
+    }
 
     const job = await JobRepositoryImpl.create({
         type: validation.data.type,

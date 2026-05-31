@@ -5,6 +5,7 @@ import { ERROR_CODES } from '../../utils/error_codes.js';
 export const retryJob = async (jobId) => {
     const job = await JobRepositoryImpl.findById(jobId);
     if (!job) return { error: ERROR_CODES.JOB_NOT_FOUND };
+    if (!['failed', 'cancelled'].includes(job.status)) return { error: ERROR_CODES.INVALID_JOB_STATE };
 
     const queueJob = await mediaQueue.add(job.type, {
         jobId: job.jobId,

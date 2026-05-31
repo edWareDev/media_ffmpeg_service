@@ -32,6 +32,29 @@ export const ArtifactRepositoryImpl = {
         return { items, total, page, limit };
     },
 
+    async findAll(filters = {}, pagination = {}) {
+        const page = pagination.page || 1;
+        const limit = pagination.limit || 20;
+        const query = { deletedAt: null };
+        if (filters.mediaId) query.mediaId = filters.mediaId;
+        if (filters.jobId) query.jobId = filters.jobId;
+        if (filters.type) query.type = filters.type;
+        if (filters.sourceType) query.sourceType = filters.sourceType;
+        if (filters.sourceId) query.sourceId = filters.sourceId;
+        if (filters.parentArtifactId) query.parentArtifactId = filters.parentArtifactId;
+
+        const [items, total] = await Promise.all([
+            ArtifactModel.find(query)
+                .sort({ createdAt: -1 })
+                .skip((page - 1) * limit)
+                .limit(limit)
+                .lean(),
+            ArtifactModel.countDocuments(query)
+        ]);
+
+        return { items, total, page, limit };
+    },
+
     async findAllByMediaId(mediaId, filters = {}) {
         const query = { mediaId, deletedAt: null };
         if (filters.type) query.type = filters.type;

@@ -28,7 +28,12 @@ export const mediaValidationSchema = z.object({
 
 export const artifactListQuerySchema = paginationSchema.extend({
     type: z.enum(ARTIFACT_TYPES).optional(),
-    artifactType: z.enum(ARTIFACT_TYPES).optional()
+    artifactType: z.enum(ARTIFACT_TYPES).optional(),
+    mediaId: z.string().min(1).optional(),
+    jobId: z.string().min(1).optional(),
+    sourceType: z.enum(['media', 'artifact']).optional(),
+    sourceId: z.string().min(1).optional(),
+    parentArtifactId: z.string().min(1).optional()
 }).transform((data) => ({
     ...data,
     type: data.type || data.artifactType

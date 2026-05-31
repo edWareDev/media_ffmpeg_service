@@ -9,6 +9,7 @@ import { videoRouter } from './adapters/routers/videoRouter.js';
 import { jobsRouter } from './adapters/routers/jobsRouter.js';
 import { artifactsRouter } from './adapters/routers/artifactsRouter.js';
 import { healthRouter } from './adapters/routers/healthRouter.js';
+import { v2Router } from './adapters/routers/v2Router.js';
 import { routeNotFoundMiddleware } from './adapters/web/middlewares/routeNotFoundMiddleware.js';
 import { errorMiddleware } from './adapters/web/middlewares/errorMiddleware.js';
 import { ensureTmpDir } from './utils/fileSystem.js';
@@ -25,6 +26,7 @@ app.use('/api/v1/audio', audioRouter);
 app.use('/api/v1/video', videoRouter);
 app.use('/api/v1/jobs', jobsRouter);
 app.use('/api/v1/artifacts', artifactsRouter);
+app.use('/api/v2', v2Router);
 
 app.use(routeNotFoundMiddleware);
 app.use(errorMiddleware);
