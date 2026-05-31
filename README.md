@@ -23,45 +23,50 @@ npm test
 
 ## Rutas principales
 
-Todas las rutas están bajo `/api/v1`.
+Todas las rutas están bajo `/api/v2`.
 
-- `POST /media/upload`
+- `GET /health`
+- `POST /media`
 - `GET /media`
 - `GET /media/:mediaId`
-- `GET /media/:mediaId/metadata`
-- `POST /media/:mediaId/metadata/extract`
-- `POST /media/:mediaId/validate`
-- `GET /media/:mediaId/download`
-- `GET /media/:mediaId/artifacts`
 - `DELETE /media/:mediaId`
-- `DELETE /media/:mediaId?includeArtifacts=true`
-- `POST /audio/:mediaId/transcode`
-- `POST /audio/:mediaId/chunk`
-- `POST /audio/:mediaId/normalize`
-- `POST /audio/:mediaId/remove-silence`
-- `POST /video/:mediaId/extract-audio`
-- `POST /video/:mediaId/transcode`
-- `POST /video/:mediaId/compress`
-- `POST /video/:mediaId/split`
-- `POST /video/:mediaId/extract-frames`
-- `POST /video/:mediaId/detect-scenes`
-- `POST /video/:mediaId/generate-thumbnails`
+- `GET /media/:mediaId/download`
+- `GET /media/:mediaId/metadata`
+- `POST /media/:mediaId/validations`
+- `GET /media/:mediaId/artifacts`
+- `GET /media/:mediaId/jobs`
+- `GET /artifacts`
+- `GET /artifacts/:artifactId`
+- `DELETE /artifacts/:artifactId`
+- `GET /artifacts/:artifactId/download`
+- `GET /artifacts/:artifactId/children`
+- `GET /artifacts/:artifactId/jobs`
 - `POST /jobs`
 - `GET /jobs`
 - `GET /jobs/:jobId`
 - `POST /jobs/:jobId/cancel`
 - `POST /jobs/:jobId/retry`
-- `GET /artifacts/:artifactId/download`
-- `DELETE /artifacts/:artifactId`
-- `DELETE /artifacts/:artifactId?includeChildren=true`
-- `POST /artifacts/:artifactId/audio/chunk`
-- `POST /artifacts/:artifactId/audio/transcode`
-- `POST /artifacts/:artifactId/audio/normalize`
-- `POST /artifacts/:artifactId/audio/remove-silence`
-- `POST /artifacts/:artifactId/video/extract-frames`
-- `POST /artifacts/:artifactId/video/extract-audio`
+- `GET /operations`
+- `GET /operations/:type`
+
+## Procesamiento
+
+Todo procesamiento se crea con `POST /api/v2/jobs`. El campo `type` define la operación, y la fuente puede ser un media original o un artefacto:
+
+```json
+{
+  "type": "audio.chunk",
+  "sourceType": "media",
+  "sourceId": "med_...",
+  "options": {
+    "chunkDurationSeconds": 300
+  }
+}
+```
+
+Consultar operaciones disponibles y fuentes permitidas con `GET /api/v2/operations`.
 
 ## Documentación
 
-- Contrato OpenAPI: `docs/openapi.yaml`
+- Contrato OpenAPI v2: `docs/openapiv2.yaml`
 - Formatos y opciones multimedia: `docs/media-formats.md`

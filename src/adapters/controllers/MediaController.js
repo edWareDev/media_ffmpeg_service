@@ -6,7 +6,6 @@ import { validateMedia } from '../../usecases/media/ValidateMedia.js';
 import { getMediaArtifacts } from '../../usecases/media/GetMediaArtifacts.js';
 import { deleteMedia } from '../../usecases/media/DeleteMedia.js';
 import { downloadMedia } from '../../usecases/media/DownloadMedia.js';
-import { createMetadataJob } from '../../usecases/media/CreateMetadataJob.js';
 import { removeFileIfExists } from '../../utils/fileSystem.js';
 import { fetchResponse } from '../../utils/fetchResponse.js';
 import { HTTP_CODES } from '../../utils/http_error_codes.js';
@@ -53,16 +52,6 @@ export const getMediaMetadataController = async (req, res) => {
         const result = await getMediaMetadata(req.params.mediaId);
         throwIfError(result, 'Metadata no encontrada.');
         fetchResponse(res, { statusCode: HTTP_CODES._200_OK, message: 'Metadata obtenida correctamente.', data: result });
-    } catch (error) {
-        handleControllerError(res, error);
-    }
-};
-
-export const createMetadataJobController = async (req, res) => {
-    try {
-        const result = await createMetadataJob(req.params.mediaId);
-        throwIfError(result, 'No se pudo crear el job de metadata.');
-        fetchResponse(res, { statusCode: HTTP_CODES._202_ACCEPTED, message: 'Job de metadata creado correctamente.', data: result });
     } catch (error) {
         handleControllerError(res, error);
     }

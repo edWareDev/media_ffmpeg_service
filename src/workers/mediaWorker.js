@@ -51,8 +51,7 @@ const resolveJobSource = async ({ mediaId, sourceType = 'media', sourceId }) => 
             sourceType,
             sourceId,
             sourceFileId: artifact.storage.fileId,
-            sourceFilename: artifact.filename,
-            sourceArtifact: artifact
+            sourceFilename: artifact.filename
         };
     }
 

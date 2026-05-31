@@ -394,17 +394,12 @@ components:
       properties:
         type:
           $ref: '#/components/schemas/JobType'
-        mediaId:
-          type: string
         sourceType:
           type: string
           enum: [media, artifact]
           default: media
         sourceId:
           type: string
-        artifactId:
-          type: string
-          deprecated: true
         options:
           type: object
           additionalProperties: true

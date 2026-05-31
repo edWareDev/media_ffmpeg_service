@@ -16,9 +16,9 @@ import { createJobSchema } from './jobValidators.js';
 import { videoExtractAudioSchema } from './videoValidators.js';
 
 describe('media validators', () => {
-    it('normalizes artifactType query into type', () => {
+    it('accepts artifact list query filters', () => {
         const result = artifactListQuerySchema.parse({
-            artifactType: 'thumbnail',
+            type: 'thumbnail',
             page: '2',
             limit: '10'
         });
@@ -28,6 +28,34 @@ describe('media validators', () => {
             page: 2,
             limit: 10
         });
+    });
+
+    it('validates job options using the operation-specific schema', () => {
+        const result = createJobSchema.parse({
+            type: 'audio.chunk',
+            sourceType: 'media',
+            sourceId: 'med_123',
+            options: {
+                chunkDurationSeconds: 300
+            }
+        });
+
+        expect(result.options).toMatchObject({
+            chunkDurationSeconds: 300,
+            overlapSeconds: 0,
+            preserveTimestamps: false
+        });
+    });
+
+    it('rejects invalid job options for the operation type', () => {
+        expect(() => createJobSchema.parse({
+            type: 'audio.chunk',
+            sourceType: 'media',
+            sourceId: 'med_123',
+            options: {
+                chunkDurationSeconds: 1
+            }
+        })).toThrow();
     });
 
     it('accepts validation rules payload', () => {

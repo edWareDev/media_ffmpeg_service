@@ -11,8 +11,8 @@ export const createJob = async (payload) => {
     const validation = validateSchema(createJobSchema, payload);
     if (validation.error) return { error: validation.error.code, details: validation.error.details };
 
-    let mediaId = validation.data.mediaId;
-    let sourceId = validation.data.sourceId;
+    let mediaId = validation.data.sourceType === 'media' ? validation.data.sourceId : undefined;
+    const sourceId = validation.data.sourceId;
 
     if (validation.data.sourceType === 'artifact') {
         const artifact = await ArtifactRepositoryImpl.findById(sourceId);
