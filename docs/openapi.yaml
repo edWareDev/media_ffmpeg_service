@@ -1,0 +1,1749 @@
+openapi: 3.0.3
+info:
+  title: Media FFmpeg Service API
+  version: 1.0.0
+  license:
+    name: UNLICENSED
+    url: https://choosealicense.com/no-permission/
+  description: >
+    API REST para almacenamiento permanente de archivos multimedia y procesamiento
+    asíncrono con FFmpeg, MongoDB/GridFS y BullMQ. Todo endpoint que usa FFmpeg
+    crea un Job. Todo output generado por FFmpeg se registra como Artifact.
+servers:
+  - url: /api/v1
+    description: Base path del servicio
+security: []
+tags:
+  - name: Health
+    description: Estado del servicio.
+  - name: Media
+    description: Carga, consulta, metadata, validación, descarga y eliminación de media.
+  - name: Audio
+    description: Creación de jobs de procesamiento de audio.
+  - name: Video
+    description: Creación de jobs de procesamiento de video.
+  - name: Jobs
+    description: Administración y consulta de jobs asíncronos.
+  - name: Artifacts
+    description: Descarga y eliminación de artefactos generados.
+
+paths:
+  /health:
+    get:
+      tags: [Health]
+      summary: Verifica disponibilidad del servicio.
+      operationId: getHealth
+      responses:
+        '200':
+          description: Servicio disponible.
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - type: object
+                    properties:
+                      data:
+                        type: object
+                        properties:
+                          status:
+                            type: string
+                            example: ok
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /media/upload:
+    post:
+      tags: [Media]
+      summary: Sube un archivo multimedia.
+      operationId: uploadMedia
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [file]
+              properties:
+                file:
+                  type: string
+                  format: binary
+                source:
+                  type: string
+                  example: user-upload
+                purpose:
+                  type: string
+                  example: conversion
+      responses:
+        '201':
+          description: Archivo subido correctamente.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MediaResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /media:
+    get:
+      tags: [Media]
+      summary: Lista archivos multimedia subidos.
+      operationId: getMedia
+      parameters:
+        - name: mediaType
+          in: query
+          required: false
+          schema:
+            $ref: '#/components/schemas/MediaType'
+        - name: source
+          in: query
+          required: false
+          schema:
+            type: string
+        - name: purpose
+          in: query
+          required: false
+          schema:
+            type: string
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/Limit'
+      responses:
+        '200':
+          description: Archivos obtenidos correctamente.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MediaListResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+
+  /media/{mediaId}:
+    get:
+      tags: [Media]
+      summary: Obtiene información del archivo.
+      operationId: getMediaById
+      parameters:
+        - $ref: '#/components/parameters/MediaId'
+      responses:
+        '200':
+          description: Archivo obtenido correctamente.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MediaResponse'
+        '404':
+          $ref: '#/components/responses/MediaNotFound'
+    delete:
+      tags: [Media]
+      summary: Elimina un archivo y opcionalmente sus artefactos.
+      operationId: deleteMedia
+      parameters:
+        - $ref: '#/components/parameters/MediaId'
+        - name: includeArtifacts
+          in: query
+          required: false
+          schema:
+            type: boolean
+            default: false
+      responses:
+        '200':
+          description: Archivo eliminado correctamente.
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - type: object
+                    properties:
+                      data:
+                        type: object
+                        properties:
+                          mediaId:
+                            type: string
+                          deleted:
+                            type: boolean
+                          artifactsDeleted:
+                            type: boolean
+                          artifactCountDeleted:
+                            type: integer
+        '409':
+          description: El archivo tiene artefactos activos. Reintentar con includeArtifacts=true para borrado en cascada.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          $ref: '#/components/responses/MediaNotFound'
+
+  /media/{mediaId}/metadata:
+    get:
+      tags: [Media]
+      summary: Obtiene metadata básica persistida.
+      description: Este endpoint solo lee base de datos. Para recalcular metadata con FFprobe usar /media/{mediaId}/metadata/extract.
+      operationId: getMediaMetadata
+      parameters:
+        - $ref: '#/components/parameters/MediaId'
+      responses:
+        '200':
+          description: Metadata obtenida correctamente.
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - type: object
+                    properties:
+                      data:
+                        type: object
+                        properties:
+                          mediaId:
+                            type: string
+                          mediaType:
+                            $ref: '#/components/schemas/MediaType'
+                          mimeType:
+                            type: string
+                          sizeBytes:
+                            type: integer
+                          metadata:
+                            $ref: '#/components/schemas/MediaMetadata'
+        '404':
+          $ref: '#/components/responses/MediaNotFound'
+
+  /media/{mediaId}/metadata/extract:
+    post:
+      tags: [Media]
+      summary: Crea un job para extraer metadata básica con FFprobe.
+      operationId: createMetadataJob
+      parameters:
+        - $ref: '#/components/parameters/MediaId'
+      responses:
+        '202':
+          description: Job de metadata creado correctamente.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/JobResponse'
+        '404':
+          $ref: '#/components/responses/MediaNotFound'
+
+  /media/{mediaId}/validate:
+    post:
+      tags: [Media]
+      summary: Valida el archivo contra reglas técnicas usando metadata persistida.
+      operationId: validateMedia
+      parameters:
+        - $ref: '#/components/parameters/MediaId'
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ValidateMediaRequest'
+      responses:
+        '200':
+          description: Validación ejecutada correctamente.
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/MediaValidationResult'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/MediaNotFound'
+
+  /media/{mediaId}/download:
+    get:
+      tags: [Media]
+      summary: Descarga el archivo original.
+      operationId: downloadMedia
+      parameters:
+        - $ref: '#/components/parameters/MediaId'
+      responses:
+        '200':
+          description: Stream binario del archivo.
+          content:
+            application/octet-stream:
+              schema:
+                type: string
+                format: binary
+        '404':
+          $ref: '#/components/responses/MediaNotFound'
+
+  /media/{mediaId}/artifacts:
+    get:
+      tags: [Media]
+      summary: Lista artefactos generados para un archivo.
+      operationId: getMediaArtifacts
+      parameters:
+        - $ref: '#/components/parameters/MediaId'
+        - name: type
+          in: query
+          required: false
+          schema:
+            $ref: '#/components/schemas/ArtifactType'
+        - name: artifactType
+          in: query
+          required: false
+          deprecated: true
+          description: Alias de type.
+          schema:
+            $ref: '#/components/schemas/ArtifactType'
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/Limit'
+      responses:
+        '200':
+          description: Artefactos obtenidos correctamente.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ArtifactListResponse'
+        '404':
+          $ref: '#/components/responses/MediaNotFound'
+
+  /audio/{mediaId}/transcode:
+    post:
+      tags: [Audio]
+      summary: Crea un job para convertir audio.
+      operationId: transcodeAudio
+      parameters:
+        - $ref: '#/components/parameters/MediaId'
+      requestBody:
+        $ref: '#/components/requestBodies/AudioTranscode'
+      responses:
+        '202':
+          $ref: '#/components/responses/JobAccepted'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/MediaNotFound'
+
+  /audio/{mediaId}/chunk:
+    post:
+      tags: [Audio]
+      summary: Crea un job para dividir audio en segmentos.
+      operationId: chunkAudio
+      parameters:
+        - $ref: '#/components/parameters/MediaId'
+      requestBody:
+        $ref: '#/components/requestBodies/AudioChunk'
+      responses:
+        '202':
+          $ref: '#/components/responses/JobAccepted'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/MediaNotFound'
+
+  /audio/{mediaId}/normalize:
+    post:
+      tags: [Audio]
+      summary: Crea un job para normalizar audio.
+      operationId: normalizeAudio
+      parameters:
+        - $ref: '#/components/parameters/MediaId'
+      requestBody:
+        $ref: '#/components/requestBodies/AudioNormalize'
+      responses:
+        '202':
+          $ref: '#/components/responses/JobAccepted'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/MediaNotFound'
+
+  /audio/{mediaId}/remove-silence:
+    post:
+      tags: [Audio]
+      summary: Crea un job para eliminar silencios del audio.
+      operationId: removeSilenceAudio
+      parameters:
+        - $ref: '#/components/parameters/MediaId'
+      requestBody:
+        $ref: '#/components/requestBodies/AudioRemoveSilence'
+      responses:
+        '202':
+          $ref: '#/components/responses/JobAccepted'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/MediaNotFound'
+
+  /video/{mediaId}/extract-audio:
+    post:
+      tags: [Video]
+      summary: Crea un job para extraer audio desde video.
+      operationId: extractAudioFromVideo
+      parameters:
+        - $ref: '#/components/parameters/MediaId'
+      requestBody:
+        $ref: '#/components/requestBodies/VideoExtractAudio'
+      responses:
+        '202':
+          $ref: '#/components/responses/JobAccepted'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/MediaNotFound'
+
+  /video/{mediaId}/transcode:
+    post:
+      tags: [Video]
+      summary: Crea un job para convertir video.
+      operationId: transcodeVideo
+      parameters:
+        - $ref: '#/components/parameters/MediaId'
+      requestBody:
+        $ref: '#/components/requestBodies/VideoTranscode'
+      responses:
+        '202':
+          $ref: '#/components/responses/JobAccepted'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/MediaNotFound'
+
+  /video/{mediaId}/compress:
+    post:
+      tags: [Video]
+      summary: Crea un job para comprimir video.
+      operationId: compressVideo
+      parameters:
+        - $ref: '#/components/parameters/MediaId'
+      requestBody:
+        $ref: '#/components/requestBodies/VideoCompress'
+      responses:
+        '202':
+          $ref: '#/components/responses/JobAccepted'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/MediaNotFound'
+
+  /video/{mediaId}/split:
+    post:
+      tags: [Video]
+      summary: Crea un job para dividir video en segmentos.
+      operationId: splitVideo
+      parameters:
+        - $ref: '#/components/parameters/MediaId'
+      requestBody:
+        $ref: '#/components/requestBodies/VideoSplit'
+      responses:
+        '202':
+          $ref: '#/components/responses/JobAccepted'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/MediaNotFound'
+
+  /video/{mediaId}/extract-frames:
+    post:
+      tags: [Video]
+      summary: Crea un job para extraer frames.
+      operationId: extractFrames
+      parameters:
+        - $ref: '#/components/parameters/MediaId'
+      requestBody:
+        $ref: '#/components/requestBodies/VideoExtractFrames'
+      responses:
+        '202':
+          $ref: '#/components/responses/JobAccepted'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/MediaNotFound'
+
+  /video/{mediaId}/detect-scenes:
+    post:
+      tags: [Video]
+      summary: Crea un job para detectar escenas y guardar un artefacto scene_detection.
+      operationId: detectScenes
+      parameters:
+        - $ref: '#/components/parameters/MediaId'
+      requestBody:
+        $ref: '#/components/requestBodies/VideoDetectScenes'
+      responses:
+        '202':
+          $ref: '#/components/responses/JobAccepted'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/MediaNotFound'
+
+  /video/{mediaId}/generate-thumbnails:
+    post:
+      tags: [Video]
+      summary: Crea un job para generar thumbnails.
+      operationId: generateThumbnails
+      parameters:
+        - $ref: '#/components/parameters/MediaId'
+      requestBody:
+        $ref: '#/components/requestBodies/VideoGenerateThumbnails'
+      responses:
+        '202':
+          $ref: '#/components/responses/JobAccepted'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/MediaNotFound'
+
+  /jobs:
+    post:
+      tags: [Jobs]
+      summary: Crea un job de procesamiento.
+      operationId: createJob
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateJobRequest'
+      responses:
+        '202':
+          $ref: '#/components/responses/JobAccepted'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/MediaNotFound'
+    get:
+      tags: [Jobs]
+      summary: Lista jobs.
+      operationId: getJobs
+      parameters:
+        - name: status
+          in: query
+          required: false
+          schema:
+            $ref: '#/components/schemas/JobStatus'
+        - name: type
+          in: query
+          required: false
+          schema:
+            $ref: '#/components/schemas/JobType'
+        - name: mediaId
+          in: query
+          required: false
+          schema:
+            type: string
+        - name: sourceType
+          in: query
+          required: false
+          schema:
+            type: string
+            enum: [media, artifact]
+        - name: sourceId
+          in: query
+          required: false
+          schema:
+            type: string
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/Limit'
+      responses:
+        '200':
+          description: Jobs obtenidos correctamente.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/JobListResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+
+  /jobs/{jobId}:
+    get:
+      tags: [Jobs]
+      summary: Consulta estado y artefactos de un job.
+      operationId: getJobById
+      parameters:
+        - $ref: '#/components/parameters/JobId'
+      responses:
+        '200':
+          description: Job obtenido correctamente.
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - type: object
+                    properties:
+                      data:
+                        allOf:
+                          - $ref: '#/components/schemas/Job'
+                          - type: object
+                            properties:
+                              artifacts:
+                                type: array
+                                items:
+                                  $ref: '#/components/schemas/Artifact'
+        '404':
+          $ref: '#/components/responses/JobNotFound'
+
+  /jobs/{jobId}/cancel:
+    post:
+      tags: [Jobs]
+      summary: Cancela un job en cola.
+      operationId: cancelJob
+      parameters:
+        - $ref: '#/components/parameters/JobId'
+      responses:
+        '200':
+          description: Job cancelado correctamente.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/JobResponse'
+        '404':
+          $ref: '#/components/responses/JobNotFound'
+
+  /jobs/{jobId}/retry:
+    post:
+      tags: [Jobs]
+      summary: Reintenta un job.
+      operationId: retryJob
+      parameters:
+        - $ref: '#/components/parameters/JobId'
+      responses:
+        '202':
+          description: Job reencolado correctamente.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/JobResponse'
+        '404':
+          $ref: '#/components/responses/JobNotFound'
+
+  /artifacts/{artifactId}/download:
+    get:
+      tags: [Artifacts]
+      summary: Descarga un artefacto.
+      operationId: downloadArtifact
+      parameters:
+        - $ref: '#/components/parameters/ArtifactId'
+      responses:
+        '200':
+          description: Stream binario del artefacto.
+          content:
+            application/octet-stream:
+              schema:
+                type: string
+                format: binary
+        '404':
+          $ref: '#/components/responses/ArtifactNotFound'
+
+  /artifacts/{artifactId}/audio/transcode:
+    post:
+      tags: [Artifacts]
+      summary: Crea un job para convertir audio usando un artefacto como fuente.
+      operationId: transcodeArtifactAudio
+      parameters:
+        - $ref: '#/components/parameters/ArtifactId'
+      requestBody:
+        $ref: '#/components/requestBodies/AudioTranscode'
+      responses:
+        '202':
+          $ref: '#/components/responses/JobAccepted'
+        '404':
+          $ref: '#/components/responses/ArtifactNotFound'
+
+  /artifacts/{artifactId}/audio/chunk:
+    post:
+      tags: [Artifacts]
+      summary: Crea un job para dividir audio usando un artefacto como fuente.
+      operationId: chunkArtifactAudio
+      parameters:
+        - $ref: '#/components/parameters/ArtifactId'
+      requestBody:
+        $ref: '#/components/requestBodies/AudioChunk'
+      responses:
+        '202':
+          $ref: '#/components/responses/JobAccepted'
+        '404':
+          $ref: '#/components/responses/ArtifactNotFound'
+
+  /artifacts/{artifactId}/audio/normalize:
+    post:
+      tags: [Artifacts]
+      summary: Crea un job para normalizar audio usando un artefacto como fuente.
+      operationId: normalizeArtifactAudio
+      parameters:
+        - $ref: '#/components/parameters/ArtifactId'
+      requestBody:
+        $ref: '#/components/requestBodies/AudioNormalize'
+      responses:
+        '202':
+          $ref: '#/components/responses/JobAccepted'
+        '404':
+          $ref: '#/components/responses/ArtifactNotFound'
+
+  /artifacts/{artifactId}/audio/remove-silence:
+    post:
+      tags: [Artifacts]
+      summary: Crea un job para eliminar silencios usando un artefacto como fuente.
+      operationId: removeSilenceArtifactAudio
+      parameters:
+        - $ref: '#/components/parameters/ArtifactId'
+      requestBody:
+        $ref: '#/components/requestBodies/AudioRemoveSilence'
+      responses:
+        '202':
+          $ref: '#/components/responses/JobAccepted'
+        '404':
+          $ref: '#/components/responses/ArtifactNotFound'
+
+  /artifacts/{artifactId}/video/extract-audio:
+    post:
+      tags: [Artifacts]
+      summary: Crea un job para extraer audio usando un artefacto como fuente.
+      operationId: extractAudioFromArtifactVideo
+      parameters:
+        - $ref: '#/components/parameters/ArtifactId'
+      requestBody:
+        $ref: '#/components/requestBodies/VideoExtractAudio'
+      responses:
+        '202':
+          $ref: '#/components/responses/JobAccepted'
+        '404':
+          $ref: '#/components/responses/ArtifactNotFound'
+
+  /artifacts/{artifactId}/video/transcode:
+    post:
+      tags: [Artifacts]
+      summary: Crea un job para convertir video usando un artefacto como fuente.
+      operationId: transcodeArtifactVideo
+      parameters:
+        - $ref: '#/components/parameters/ArtifactId'
+      requestBody:
+        $ref: '#/components/requestBodies/VideoTranscode'
+      responses:
+        '202':
+          $ref: '#/components/responses/JobAccepted'
+        '404':
+          $ref: '#/components/responses/ArtifactNotFound'
+
+  /artifacts/{artifactId}/video/compress:
+    post:
+      tags: [Artifacts]
+      summary: Crea un job para comprimir video usando un artefacto como fuente.
+      operationId: compressArtifactVideo
+      parameters:
+        - $ref: '#/components/parameters/ArtifactId'
+      requestBody:
+        $ref: '#/components/requestBodies/VideoCompress'
+      responses:
+        '202':
+          $ref: '#/components/responses/JobAccepted'
+        '404':
+          $ref: '#/components/responses/ArtifactNotFound'
+
+  /artifacts/{artifactId}/video/split:
+    post:
+      tags: [Artifacts]
+      summary: Crea un job para dividir video usando un artefacto como fuente.
+      operationId: splitArtifactVideo
+      parameters:
+        - $ref: '#/components/parameters/ArtifactId'
+      requestBody:
+        $ref: '#/components/requestBodies/VideoSplit'
+      responses:
+        '202':
+          $ref: '#/components/responses/JobAccepted'
+        '404':
+          $ref: '#/components/responses/ArtifactNotFound'
+
+  /artifacts/{artifactId}/video/extract-frames:
+    post:
+      tags: [Artifacts]
+      summary: Crea un job para extraer frames usando un artefacto como fuente.
+      operationId: extractArtifactFrames
+      parameters:
+        - $ref: '#/components/parameters/ArtifactId'
+      requestBody:
+        $ref: '#/components/requestBodies/VideoExtractFrames'
+      responses:
+        '202':
+          $ref: '#/components/responses/JobAccepted'
+        '404':
+          $ref: '#/components/responses/ArtifactNotFound'
+
+  /artifacts/{artifactId}/video/detect-scenes:
+    post:
+      tags: [Artifacts]
+      summary: Crea un job para detectar escenas usando un artefacto como fuente.
+      operationId: detectArtifactScenes
+      parameters:
+        - $ref: '#/components/parameters/ArtifactId'
+      requestBody:
+        $ref: '#/components/requestBodies/VideoDetectScenes'
+      responses:
+        '202':
+          $ref: '#/components/responses/JobAccepted'
+        '404':
+          $ref: '#/components/responses/ArtifactNotFound'
+
+  /artifacts/{artifactId}/video/generate-thumbnails:
+    post:
+      tags: [Artifacts]
+      summary: Crea un job para generar thumbnails usando un artefacto como fuente.
+      operationId: generateArtifactThumbnails
+      parameters:
+        - $ref: '#/components/parameters/ArtifactId'
+      requestBody:
+        $ref: '#/components/requestBodies/VideoGenerateThumbnails'
+      responses:
+        '202':
+          $ref: '#/components/responses/JobAccepted'
+        '404':
+          $ref: '#/components/responses/ArtifactNotFound'
+
+  /artifacts/{artifactId}:
+    delete:
+      tags: [Artifacts]
+      summary: Elimina un artefacto.
+      operationId: deleteArtifact
+      parameters:
+        - $ref: '#/components/parameters/ArtifactId'
+        - name: includeChildren
+          in: query
+          required: false
+          description: Si es true, elimina también los artefactos generados desde este artefacto.
+          schema:
+            type: boolean
+            default: false
+      responses:
+        '200':
+          description: Artefacto eliminado correctamente.
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - type: object
+                    properties:
+                      data:
+                        type: object
+                        properties:
+                          artifactId:
+                            type: string
+                          deleted:
+                            type: boolean
+                          childrenDeleted:
+                            type: integer
+                          artifactIdsDeleted:
+                            type: array
+                            items:
+                              type: string
+        '409':
+          description: El artefacto tiene artefactos hijos. Reintentar con includeChildren=true para borrado en cascada.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          $ref: '#/components/responses/ArtifactNotFound'
+
+components:
+  parameters:
+    MediaId:
+      name: mediaId
+      in: path
+      required: true
+      schema:
+        type: string
+      example: med_abc123
+    JobId:
+      name: jobId
+      in: path
+      required: true
+      schema:
+        type: string
+      example: job_abc123
+    ArtifactId:
+      name: artifactId
+      in: path
+      required: true
+      schema:
+        type: string
+      example: art_abc123
+    Page:
+      name: page
+      in: query
+      required: false
+      schema:
+        type: integer
+        minimum: 1
+        default: 1
+    Limit:
+      name: limit
+      in: query
+      required: false
+      schema:
+        type: integer
+        minimum: 1
+        maximum: 100
+        default: 20
+
+  requestBodies:
+    AudioTranscode:
+      required: false
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/AudioTranscodeOptions'
+    AudioChunk:
+      required: false
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/AudioChunkOptions'
+    AudioNormalize:
+      required: false
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/AudioNormalizeOptions'
+    AudioRemoveSilence:
+      required: false
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/AudioRemoveSilenceOptions'
+    VideoExtractAudio:
+      required: false
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/VideoExtractAudioOptions'
+    VideoTranscode:
+      required: false
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/VideoTranscodeOptions'
+    VideoCompress:
+      required: false
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/VideoCompressOptions'
+    VideoSplit:
+      required: false
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/VideoSplitOptions'
+    VideoExtractFrames:
+      required: false
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/VideoExtractFramesOptions'
+    VideoDetectScenes:
+      required: false
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/VideoDetectScenesOptions'
+    VideoGenerateThumbnails:
+      required: false
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/VideoGenerateThumbnailsOptions'
+
+  responses:
+    JobAccepted:
+      description: Job creado correctamente.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/JobResponse'
+    BadRequest:
+      description: Solicitud inválida.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+    MediaNotFound:
+      description: Archivo no encontrado.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            ok: false
+            message: Archivo no encontrado.
+            errorCode: MEDIA_NOT_FOUND
+    ArtifactNotFound:
+      description: Artefacto no encontrado.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            ok: false
+            message: Artefacto no encontrado.
+            errorCode: ARTIFACT_NOT_FOUND
+    JobNotFound:
+      description: Job no encontrado.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            ok: false
+            message: Job no encontrado.
+            errorCode: JOB_NOT_FOUND
+    InternalError:
+      description: Error interno del servicio.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+    NotFound:
+      description: Recurso no encontrado.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+
+  schemas:
+    ApiResponse:
+      type: object
+      required: [ok, message]
+      properties:
+        ok:
+          type: boolean
+        message:
+          type: string
+        data:
+          type: object
+          additionalProperties: true
+          nullable: true
+    ErrorResponse:
+      type: object
+      required: [ok, message, errorCode]
+      properties:
+        ok:
+          type: boolean
+          example: false
+        message:
+          type: string
+        errorCode:
+          type: string
+          enum:
+            - INVALID_FILE
+            - FILE_TOO_LARGE
+            - UNSUPPORTED_MEDIA_TYPE
+            - INVALID_MEDIA_FORMAT
+            - MEDIA_NOT_FOUND
+            - MEDIA_HAS_ARTIFACTS
+            - ARTIFACT_NOT_FOUND
+            - ARTIFACT_HAS_CHILDREN
+            - JOB_NOT_FOUND
+            - PROCESSING_FAILED
+            - FFMPEG_FAILED
+            - FFPROBE_FAILED
+            - SIGNED_URL_FAILED
+            - VALIDATION_FAILED
+            - RATE_LIMITED
+            - STORAGE_WRITE_FAILED
+            - STORAGE_READ_FAILED
+            - ROUTE_NOT_FOUND
+
+    MediaType:
+      type: string
+      enum: [audio, video, unknown]
+    ArtifactType:
+      type: string
+      enum:
+        - audio_transcoded
+        - audio_chunk
+        - audio_normalized
+        - audio_silence_removed
+        - audio_extract
+        - video_transcoded
+        - video_compressed
+        - video_segment
+        - frame
+        - thumbnail
+        - scene_detection
+    JobType:
+      type: string
+      enum:
+        - media.extractMetadata
+        - audio.transcode
+        - audio.chunk
+        - audio.normalize
+        - audio.removeSilence
+        - video.extractAudio
+        - video.transcode
+        - video.compress
+        - video.split
+        - video.extractFrames
+        - video.detectScenes
+        - video.generateThumbnails
+    JobStatus:
+      type: string
+      enum: [queued, active, completed, failed, cancelled]
+
+    StorageRef:
+      type: object
+      required: [provider, fileId]
+      properties:
+        provider:
+          type: string
+          example: gridfs
+        fileId:
+          type: string
+          example: 665f0a7e8d3c9a00123abcde
+
+    MediaMetadata:
+      type: object
+      properties:
+        durationSeconds:
+          type: number
+        codec:
+          type: string
+        container:
+          type: string
+        width:
+          type: integer
+        height:
+          type: integer
+        channels:
+          type: integer
+        sampleRate:
+          type: integer
+        bitrate:
+          type: integer
+
+    Media:
+      type: object
+      required: [mediaId, originalName, filename, mimeType, sizeBytes, mediaType, storage]
+      properties:
+        mediaId:
+          type: string
+          example: med_Lwz8pNfKj2sQ9a1B
+        originalName:
+          type: string
+          example: input.mp4
+        filename:
+          type: string
+          example: input.mp4
+        mimeType:
+          type: string
+          example: video/mp4
+        sizeBytes:
+          type: integer
+          example: 10485760
+        mediaType:
+          $ref: '#/components/schemas/MediaType'
+        source:
+          type: string
+        purpose:
+          type: string
+        storage:
+          $ref: '#/components/schemas/StorageRef'
+        metadata:
+          $ref: '#/components/schemas/MediaMetadata'
+        deletedAt:
+          type: string
+          format: date-time
+          nullable: true
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    ArtifactMetadata:
+      type: object
+      properties:
+        format:
+          type: string
+        codec:
+          type: string
+        durationSeconds:
+          type: number
+        width:
+          type: integer
+        height:
+          type: integer
+        startSecond:
+          type: number
+        endSecond:
+          type: number
+        sceneCount:
+          type: integer
+        index:
+          type: integer
+
+    Artifact:
+      type: object
+      required: [artifactId, mediaId, jobId, type, filename, mimeType, sizeBytes, storage]
+      properties:
+        artifactId:
+          type: string
+          example: art_M46qy0N7wq1F8s3A
+        mediaId:
+          type: string
+          example: med_Lwz8pNfKj2sQ9a1B
+        jobId:
+          type: string
+          example: job_t4BrW8EnC1DKx5Ez
+        sourceType:
+          type: string
+          enum: [media, artifact]
+          default: media
+        sourceId:
+          type: string
+        parentArtifactId:
+          type: string
+        type:
+          $ref: '#/components/schemas/ArtifactType'
+        filename:
+          type: string
+          example: output-001.webp
+        mimeType:
+          type: string
+          example: image/webp
+        sizeBytes:
+          type: integer
+        storage:
+          $ref: '#/components/schemas/StorageRef'
+        metadata:
+          $ref: '#/components/schemas/ArtifactMetadata'
+        deletedAt:
+          type: string
+          format: date-time
+          nullable: true
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    Job:
+      type: object
+      required: [jobId, mediaId, type, status, progress]
+      properties:
+        jobId:
+          type: string
+          example: job_t4BrW8EnC1DKx5Ez
+        queueJobId:
+          type: string
+        mediaId:
+          type: string
+        sourceType:
+          type: string
+          enum: [media, artifact]
+          default: media
+        sourceId:
+          type: string
+        type:
+          $ref: '#/components/schemas/JobType'
+        status:
+          $ref: '#/components/schemas/JobStatus'
+        progress:
+          type: integer
+          minimum: 0
+          maximum: 100
+        currentStep:
+          type: string
+          example: processing_ffmpeg
+        options:
+          type: object
+          additionalProperties: true
+        result:
+          type: object
+          additionalProperties: true
+          example:
+            artifactCount: 3
+            artifactType: thumbnail
+        error:
+          type: object
+          nullable: true
+          properties:
+            message:
+              type: string
+            code:
+              type: string
+        startedAt:
+          type: string
+          format: date-time
+        completedAt:
+          type: string
+          format: date-time
+        failedAt:
+          type: string
+          format: date-time
+        cancelledAt:
+          type: string
+          format: date-time
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    MediaResponse:
+      allOf:
+        - $ref: '#/components/schemas/ApiResponse'
+        - type: object
+          properties:
+            data:
+              $ref: '#/components/schemas/Media'
+    MediaListResponse:
+      allOf:
+        - $ref: '#/components/schemas/ApiResponse'
+        - type: object
+          properties:
+            data:
+              type: object
+              required: [items, total, page, limit]
+              properties:
+                items:
+                  type: array
+                  items:
+                    $ref: '#/components/schemas/Media'
+                total:
+                  type: integer
+                page:
+                  type: integer
+                limit:
+                  type: integer
+    JobResponse:
+      allOf:
+        - $ref: '#/components/schemas/ApiResponse'
+        - type: object
+          properties:
+            data:
+              $ref: '#/components/schemas/Job'
+    ArtifactListResponse:
+      allOf:
+        - $ref: '#/components/schemas/ApiResponse'
+        - type: object
+          properties:
+            data:
+              type: object
+              required: [items, total, page, limit]
+              properties:
+                items:
+                  type: array
+                  items:
+                    $ref: '#/components/schemas/Artifact'
+                total:
+                  type: integer
+                page:
+                  type: integer
+                limit:
+                  type: integer
+    JobListResponse:
+      allOf:
+        - $ref: '#/components/schemas/ApiResponse'
+        - type: object
+          properties:
+            data:
+              type: object
+              required: [items, total, page, limit]
+              properties:
+                items:
+                  type: array
+                  items:
+                    $ref: '#/components/schemas/Job'
+                total:
+                  type: integer
+                page:
+                  type: integer
+                limit:
+                  type: integer
+
+    ValidateMediaRequest:
+      type: object
+      properties:
+        rules:
+          type: object
+          properties:
+            allowedTypes:
+              type: array
+              items:
+                type: string
+                enum: [audio, video]
+            maxSizeMb:
+              type: number
+              minimum: 0
+              exclusiveMinimum: true
+            maxDurationSeconds:
+              type: number
+              minimum: 0
+              exclusiveMinimum: true
+            requireAudio:
+              type: boolean
+            maxResolution:
+              type: string
+              pattern: "^\\d+x\\d+$"
+              example: 1920x1080
+            allowedContainers:
+              type: array
+              items:
+                type: string
+            allowedVideoCodecs:
+              type: array
+              items:
+                type: string
+            allowedAudioCodecs:
+              type: array
+              items:
+                type: string
+    MediaValidationResult:
+      type: object
+      required: [mediaId, valid, failures]
+      properties:
+        mediaId:
+          type: string
+        valid:
+          type: boolean
+        failures:
+          type: array
+          items:
+            type: object
+            properties:
+              rule:
+                type: string
+              message:
+                type: string
+
+    CreateJobRequest:
+      type: object
+      required: [type]
+      properties:
+        type:
+          $ref: '#/components/schemas/JobType'
+        mediaId:
+          type: string
+          description: Requerido para fuentes media. Para fuentes artifact se resuelve desde el artefacto.
+        sourceType:
+          type: string
+          enum: [media, artifact]
+          default: media
+        sourceId:
+          type: string
+          description: mediaId cuando sourceType=media, artifactId cuando sourceType=artifact.
+        artifactId:
+          type: string
+          deprecated: true
+          description: Alias de sourceId cuando sourceType=artifact.
+        options:
+          type: object
+          additionalProperties: true
+          default: {}
+
+    AudioTranscodeOptions:
+      type: object
+      properties:
+        targetFormat:
+          type: string
+          enum: [flac, wav, mp3, ogg, m4a]
+          description: Si no se envía, se intenta preservar el contenedor/formato del original.
+        codec:
+          type: string
+          description: Si no se envía, se copia o preserva el codec original cuando sea viable.
+          example: libopus
+        channels:
+          type: integer
+          minimum: 1
+          maximum: 8
+          description: Si no se envía, se preserva la cantidad de canales original cuando sea viable.
+        sampleRate:
+          type: integer
+          minimum: 8000
+          maximum: 192000
+          description: Si no se envía, se preserva el sample rate original cuando sea viable.
+        bitrate:
+          type: string
+          nullable: true
+          description: Si no se envía, se copia o preserva el bitrate original cuando sea viable. Si es null, no se fija bitrate explícito.
+    AudioChunkOptions:
+      type: object
+      properties:
+        chunkDurationSeconds:
+          type: integer
+          minimum: 30
+          maximum: 1800
+          default: 300
+        overlapSeconds:
+          type: integer
+          minimum: 0
+          maximum: 10
+          default: 0
+        targetFormat:
+          type: string
+          enum: [flac, mp3, wav, ogg, m4a]
+          description: Si no se envía, se intenta preservar el contenedor/formato del original.
+        preserveTimestamps:
+          type: boolean
+          default: false
+        codec:
+          type: string
+          description: Si no se envía, se intenta preservar el codec original cuando sea viable.
+          example: libopus
+        bitrate:
+          type: string
+          nullable: true
+          description: Si no se envía, se intenta preservar el bitrate original. Si es null, no se fija bitrate explícito.
+          example: 96k
+        channels:
+          type: integer
+          minimum: 1
+          maximum: 8
+          description: Si no se envía, se intenta preservar la cantidad de canales original.
+          example: 1
+        sampleRate:
+          type: integer
+          minimum: 8000
+          maximum: 192000
+          description: Si no se envía, se intenta preservar el sample rate original.
+          example: 48000
+    AudioNormalizeOptions:
+      type: object
+      properties:
+        loudnessTarget:
+          type: number
+          minimum: -40
+          maximum: -5
+          default: -16
+        truePeak:
+          type: number
+          minimum: -9
+          maximum: 0
+          default: -1.5
+        lra:
+          type: number
+          minimum: 1
+          maximum: 20
+          default: 11
+        targetFormat:
+          type: string
+          enum: [flac, wav, mp3, ogg, m4a]
+          description: Si no se envía, se intenta preservar el contenedor/formato del original.
+        codec:
+          type: string
+          description: Si no se envía, se intenta preservar el codec original cuando sea viable.
+          example: libopus
+        bitrate:
+          type: string
+          nullable: true
+          description: Si no se envía, se intenta preservar el bitrate original. Si es null, no se fija bitrate explícito.
+          example: 96k
+        channels:
+          type: integer
+          minimum: 1
+          maximum: 8
+          description: Si no se envía, se intenta preservar la cantidad de canales original.
+          example: 1
+        sampleRate:
+          type: integer
+          minimum: 8000
+          maximum: 192000
+          description: Si no se envía, se intenta preservar el sample rate original.
+          example: 48000
+    AudioRemoveSilenceOptions:
+      type: object
+      properties:
+        minSilenceDurationMs:
+          type: integer
+          minimum: 100
+          maximum: 10000
+          default: 700
+        silenceThresholdDb:
+          type: number
+          minimum: -90
+          maximum: -10
+          default: -40
+        targetFormat:
+          type: string
+          enum: [flac, wav, mp3, ogg, m4a]
+          description: Si no se envía, se intenta preservar el contenedor/formato del original.
+        codec:
+          type: string
+          description: Si no se envía, se intenta preservar el codec original cuando sea viable.
+          example: libopus
+        bitrate:
+          type: string
+          nullable: true
+          description: Si no se envía, se intenta preservar el bitrate original. Si es null, no se fija bitrate explícito.
+          example: 96k
+        channels:
+          type: integer
+          minimum: 1
+          maximum: 8
+          description: Si no se envía, se intenta preservar la cantidad de canales original.
+          example: 1
+        sampleRate:
+          type: integer
+          minimum: 8000
+          maximum: 192000
+          description: Si no se envía, se intenta preservar el sample rate original.
+          example: 48000
+
+    VideoExtractAudioOptions:
+      type: object
+      properties:
+        targetFormat:
+          type: string
+          enum: [flac, wav, mp3, ogg, m4a]
+          description: Si no se envía, se intenta preservar el formato/codec de audio extraído cuando sea viable.
+        codec:
+          type: string
+          description: Si no se envía, se copia o preserva el codec original cuando sea viable.
+          example: libopus
+        bitrate:
+          type: string
+          nullable: true
+          description: Si no se envía, se copia o preserva el bitrate original cuando sea viable. Si es null, no se fija bitrate explícito.
+          example: 96k
+        channels:
+          type: integer
+          minimum: 1
+          maximum: 8
+          description: Si no se envía, se preserva la cantidad de canales original cuando sea viable.
+        sampleRate:
+          type: integer
+          minimum: 8000
+          maximum: 192000
+          description: Si no se envía, se preserva el sample rate original cuando sea viable.
+    VideoTranscodeOptions:
+      type: object
+      properties:
+        container:
+          type: string
+          enum: [mp4, webm, mkv, mov]
+          default: mp4
+        videoCodec:
+          type: string
+          default: libx264
+        audioCodec:
+          type: string
+          default: aac
+        resolution:
+          type: string
+        fps:
+          type: integer
+          minimum: 1
+          maximum: 120
+        crf:
+          type: integer
+          minimum: 0
+          maximum: 51
+          default: 23
+        preset:
+          type: string
+          enum: [ultrafast, superfast, veryfast, faster, fast, medium, slow, slower, veryslow]
+          default: medium
+    VideoCompressOptions:
+      type: object
+      properties:
+        crf:
+          type: integer
+          minimum: 0
+          maximum: 51
+          default: 23
+        preset:
+          type: string
+          enum: [ultrafast, superfast, veryfast, faster, fast, medium, slow, slower, veryslow]
+          default: medium
+        maxWidth:
+          type: integer
+          minimum: 120
+          maximum: 7680
+        maxHeight:
+          type: integer
+          minimum: 120
+          maximum: 4320
+        audioBitrate:
+          type: string
+    VideoSplitOptions:
+      type: object
+      properties:
+        segmentDurationSeconds:
+          type: integer
+          minimum: 30
+          maximum: 7200
+          default: 600
+        overlapSeconds:
+          type: integer
+          minimum: 0
+          maximum: 30
+          default: 0
+        preserveKeyframes:
+          type: boolean
+          default: true
+    VideoExtractFramesOptions:
+      type: object
+      properties:
+        mode:
+          type: string
+          enum: [interval, scene-change, keyframes, hybrid]
+          default: scene-change
+        sceneThreshold:
+          type: number
+          minimum: 0
+          maximum: 1
+          default: 0.3
+        intervalSeconds:
+          type: integer
+          minimum: 1
+          maximum: 3600
+          default: 30
+        maxFrames:
+          type: integer
+          minimum: 1
+          maximum: 500
+          default: 30
+        format:
+          type: string
+          enum: [png, jpeg, jpg, webp]
+          default: png
+        width:
+          type: integer
+          minimum: 64
+          maximum: 7680
+    VideoDetectScenesOptions:
+      type: object
+      properties:
+        sceneThreshold:
+          type: number
+          minimum: 0
+          maximum: 1
+          default: 0.3
+        minSceneDurationSeconds:
+          type: number
+          minimum: 0
+          maximum: 60
+          default: 2
+    VideoGenerateThumbnailsOptions:
+      type: object
+      properties:
+        count:
+          type: integer
+          minimum: 1
+          maximum: 50
+          default: 5
+        width:
+          type: integer
+          minimum: 64
+          maximum: 1920
+          default: 320
+        format:
+          type: string
+          enum: [webp, png, jpeg, jpg]
+          default: webp

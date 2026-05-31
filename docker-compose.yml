@@ -1,0 +1,31 @@
+name: mmpeg-service
+services:
+  api:
+    build: .
+    ports:
+      - "3000:3000"
+    env_file:
+      - .env
+    container_name: mmpeg-api
+    depends_on:
+      - mongo
+      - redis
+    volumes:
+      - ./tmp:/app/tmp
+
+  mongo:
+    image: mongo:8.3.2
+    container_name: mmpeg-mongo
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongo_data:/data/db
+
+  redis:
+    image: redis:8-alpine
+    container_name: mmpeg-redis
+    ports:
+      - "6379:6379"
+
+volumes:
+  mongo_data:
