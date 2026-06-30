@@ -2,32 +2,36 @@ name: mmpeg-service
 services:
   api:
     build: .
-    ports:
-      - "3000:3000"
+    expose:
+      - ${API_PORT}
     tmpfs:
       - /app/tmp:size=1024M
     env_file:
       - .env
     container_name: mmpeg-api
+    restart: unless-stopped
     depends_on:
       - mongo
       - redis
-    volumes:
-      - ./tmp:/app/tmp
 
   mongo:
     image: mongo:8.3.4
     container_name: mmpeg-mongo
-    ports:
-      - "27017:27017"
+    expose:
+      - 27017
+    restart: unless-stopped
     volumes:
       - mongo_data:/data/db
 
   redis:
     image: redis:8-alpine
     container_name: mmpeg-redis
-    ports:
-      - "6379:6379"
+    expose:
+      - 6379
+    restart: unless-stopped
+    volumes:
+      - redis_data:/data
 
 volumes:
   mongo_data:
+  redis_data:
