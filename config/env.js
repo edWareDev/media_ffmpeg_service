@@ -1,9 +1,6 @@
-import dotenv from 'dotenv';
 import ffmpegPath from 'ffmpeg-static';
 import ffprobeStatic from 'ffprobe-static';
 import path from 'node:path';
-
-dotenv.config();
 
 const numberFromEnv = (value, fallback) => {
     const parsed = Number(value);

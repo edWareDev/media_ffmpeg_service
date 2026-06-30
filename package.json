@@ -5,14 +5,13 @@
   "type": "module",
   "main": "src/app.js",
   "scripts": {
-    "start": "node src/app.js",
-    "dev": "node --watch src/app.js",
+    "start": "node --env-file .env src/app.js",
+    "dev": "node --env-file .env.development --watch src/app.js",
     "lint": "eslint .",
     "test": "vitest run"
   },
   "dependencies": {
     "bullmq": "^5.53.2",
-    "dotenv": "^17.4.2",
     "express": "^5.2.1",
     "ffmpeg-static": "^5.3.0",
     "ffprobe-static": "^3.1.0",
