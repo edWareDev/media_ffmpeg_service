@@ -80,7 +80,7 @@ export const ArtifactRepositoryImpl = {
         return ArtifactModel.findOneAndUpdate(
             { artifactId, deletedAt: null },
             { $set: { deletedAt: new Date() } },
-            { new: true }
+            { returnDocument: true }
         ).lean();
     },
 

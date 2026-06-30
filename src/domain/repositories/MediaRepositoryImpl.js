@@ -38,7 +38,7 @@ export const MediaRepositoryImpl = {
         return MediaModel.findOneAndUpdate(
             { mediaId, deletedAt: null },
             { $set: data },
-            { new: true }
+            { returnDocument: true }
         ).lean();
     },
 
@@ -46,7 +46,7 @@ export const MediaRepositoryImpl = {
         return MediaModel.findOneAndUpdate(
             { mediaId, deletedAt: null },
             { $set: { deletedAt: new Date() } },
-            { new: true }
+            { returnDocument: true }
         ).lean();
     }
 };

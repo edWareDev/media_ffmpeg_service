@@ -4,25 +4,6 @@ import { env } from '../../../config/env.js';
 import { ensureTmpDir } from '../../utils/fileSystem.js';
 import { healthRouter } from './healthRouter.js';
 import {
-    deleteMediaV2Controller,
-    downloadMediaV2Controller,
-    getMediaArtifactsV2Controller,
-    getMediaByIdV2Controller,
-    getMediaJobsV2Controller,
-    getMediaMetadataV2Controller,
-    getMediaV2Controller,
-    uploadMediaV2Controller,
-    validateMediaV2Controller
-} from '../controllers/MediaV2Controller.js';
-import {
-    deleteArtifactV2Controller,
-    downloadArtifactV2Controller,
-    getArtifactByIdV2Controller,
-    getArtifactChildrenV2Controller,
-    getArtifactJobsV2Controller,
-    getArtifactsV2Controller
-} from '../controllers/ArtifactV2Controller.js';
-import {
     cancelJobController,
     createJobController,
     getJobByIdController,
@@ -30,6 +11,8 @@ import {
     retryJobController
 } from '../controllers/JobController.js';
 import { getOperationByTypeController, getOperationsController } from '../controllers/OperationsController.js';
+import { deleteMediaController, downloadMediaController, getMediaArtifactsController, getMediaByIdController, getMediaController, getMediaJobsController, getMediaMetadataController, uploadMediaController, validateMediaController } from '../controllers/MediaController.js';
+import { deleteArtifactController, downloadArtifactController, getArtifactByIdController, getArtifactChildrenController, getArtifactJobsController, getArtifactsController } from '../controllers/ArtifactController.js';
 
 await ensureTmpDir();
 
@@ -40,32 +23,32 @@ const upload = multer({
     }
 });
 
-export const v2Router = express.Router();
+export const v1Router = express.Router();
 
-v2Router.use(healthRouter);
+v1Router.use(healthRouter);
 
-v2Router.post('/media', upload.single('file'), uploadMediaV2Controller);
-v2Router.get('/media', getMediaV2Controller);
-v2Router.get('/media/:mediaId/download', downloadMediaV2Controller);
-v2Router.get('/media/:mediaId/metadata', getMediaMetadataV2Controller);
-v2Router.post('/media/:mediaId/validations', validateMediaV2Controller);
-v2Router.get('/media/:mediaId/artifacts', getMediaArtifactsV2Controller);
-v2Router.get('/media/:mediaId/jobs', getMediaJobsV2Controller);
-v2Router.get('/media/:mediaId', getMediaByIdV2Controller);
-v2Router.delete('/media/:mediaId', deleteMediaV2Controller);
+v1Router.post('/media', upload.single('file'), uploadMediaController);
+v1Router.get('/media', getMediaController);
+v1Router.get('/media/:mediaId/download', downloadMediaController);
+v1Router.get('/media/:mediaId/metadata', getMediaMetadataController);
+v1Router.post('/media/:mediaId/validations', validateMediaController);
+v1Router.get('/media/:mediaId/artifacts', getMediaArtifactsController);
+v1Router.get('/media/:mediaId/jobs', getMediaJobsController);
+v1Router.get('/media/:mediaId', getMediaByIdController);
+v1Router.delete('/media/:mediaId', deleteMediaController);
 
-v2Router.get('/artifacts', getArtifactsV2Controller);
-v2Router.get('/artifacts/:artifactId/download', downloadArtifactV2Controller);
-v2Router.get('/artifacts/:artifactId/children', getArtifactChildrenV2Controller);
-v2Router.get('/artifacts/:artifactId/jobs', getArtifactJobsV2Controller);
-v2Router.get('/artifacts/:artifactId', getArtifactByIdV2Controller);
-v2Router.delete('/artifacts/:artifactId', deleteArtifactV2Controller);
+v1Router.get('/artifacts', getArtifactsController);
+v1Router.get('/artifacts/:artifactId/download', downloadArtifactController);
+v1Router.get('/artifacts/:artifactId/children', getArtifactChildrenController);
+v1Router.get('/artifacts/:artifactId/jobs', getArtifactJobsController);
+v1Router.get('/artifacts/:artifactId', getArtifactByIdController);
+v1Router.delete('/artifacts/:artifactId', deleteArtifactController);
 
-v2Router.post('/jobs', createJobController);
-v2Router.get('/jobs', getJobsController);
-v2Router.get('/jobs/:jobId', getJobByIdController);
-v2Router.post('/jobs/:jobId/cancel', cancelJobController);
-v2Router.post('/jobs/:jobId/retry', retryJobController);
+v1Router.post('/jobs', createJobController);
+v1Router.get('/jobs', getJobsController);
+v1Router.get('/jobs/:jobId', getJobByIdController);
+v1Router.post('/jobs/:jobId/cancel', cancelJobController);
+v1Router.post('/jobs/:jobId/retry', retryJobController);
 
-v2Router.get('/operations', getOperationsController);
-v2Router.get('/operations/:type', getOperationByTypeController);
+v1Router.get('/operations', getOperationsController);
+v1Router.get('/operations/:type', getOperationByTypeController);

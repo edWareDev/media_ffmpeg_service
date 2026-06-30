@@ -2,24 +2,24 @@
 
 Este servicio almacena archivos originales y artefactos de forma permanente. Los procesos que usan FFmpeg son asíncronos y generan `Job`; si producen salida, también generan uno o más `Artifact`.
 
-Todas las rutas públicas están bajo `/api/v2`.
+Todas las rutas públicas están bajo `/api/v1`.
 
 ## Entrada de archivos
 
-`POST /api/v2/media` acepta archivos multimedia por `multipart/form-data`.
+`POST /api/v1/media` acepta archivos multimedia por `multipart/form-data`.
 
 Tipos de media reconocidos por MIME:
 
-| Tipo | MIME esperado |
-|---|---|
-| Audio | `audio/*` |
-| Video | `video/*` |
+| Tipo        | MIME esperado       |
+| ----------- | ------------------- |
+| Audio       | `audio/*`           |
+| Video       | `video/*`           |
 | Desconocido | Cualquier otro MIME |
 
 La metadata persistida puede consultarse con:
 
 ```txt
-GET /api/v2/media/:mediaId/metadata
+GET /api/v1/media/:mediaId/metadata
 ```
 
 Para extraer o refrescar metadata con FFprobe, crear un job:
@@ -37,8 +37,8 @@ Para extraer o refrescar metadata con FFprobe, crear un job:
 Las operaciones disponibles se consultan con:
 
 ```txt
-GET /api/v2/operations
-GET /api/v2/operations/:type
+GET /api/v1/operations
+GET /api/v1/operations/:type
 ```
 
 Tipos de job soportados:
@@ -63,7 +63,7 @@ video.generateThumbnails
 Todo procesamiento se crea con:
 
 ```txt
-POST /api/v2/jobs
+POST /api/v1/jobs
 ```
 
 Fuente media:
@@ -98,28 +98,28 @@ Fuente artifact:
 
 Los artefactos generados desde otro artefacto siguen relacionados al `mediaId` original y registran:
 
-| Campo | Descripción |
-|---|---|
-| `sourceType` | `media` o `artifact` |
-| `sourceId` | ID de la fuente usada por el job |
+| Campo              | Descripción                                                |
+| ------------------ | ---------------------------------------------------------- |
+| `sourceType`       | `media` o `artifact`                                       |
+| `sourceId`         | ID de la fuente usada por el job                           |
 | `parentArtifactId` | ID del artefacto padre cuando la fuente fue otro artefacto |
 
 ## Reglas de compatibilidad
 
-| Operación | Fuentes permitidas |
-|---|---|
-| `media.extractMetadata` | media `audio`, media `video` |
-| `audio.*` | media `audio`, media `video` con audio, artefactos de audio |
-| `video.*` | media `video`, artefactos de video procesable |
+| Operación               | Fuentes permitidas                                          |
+| ----------------------- | ----------------------------------------------------------- |
+| `media.extractMetadata` | media `audio`, media `video`                                |
+| `audio.*`               | media `audio`, media `video` con audio, artefactos de audio |
+| `video.*`               | media `video`, artefactos de video procesable               |
 
 Reglas por artefacto:
 
-| Tipo de artifact | Regla |
-|---|---|
-| `audio_chunk` | Puede usarse en operaciones `audio.*` |
-| `thumbnail` | No puede usarse en `audio.*` ni `video.*` |
-| `scene_detection` | No debe pasar por FFmpeg |
-| `video_segment` | Puede usarse en operaciones `video.*` |
+| Tipo de artifact  | Regla                                     |
+| ----------------- | ----------------------------------------- |
+| `audio_chunk`     | Puede usarse en operaciones `audio.*`     |
+| `thumbnail`       | No puede usarse en `audio.*` ni `video.*` |
+| `scene_detection` | No debe pasar por FFmpeg                  |
+| `video_segment`   | Puede usarse en operaciones `video.*`     |
 
 ## Perfiles recomendados
 
@@ -127,13 +127,13 @@ Reglas por artefacto:
 
 Perfil recomendado de alta calidad:
 
-| Campo | Valor recomendado |
-|---|---|
-| Formato | `flac` |
-| Codec | `flac` |
-| Canales | `1` mono |
+| Campo       | Valor recomendado           |
+| ----------- | --------------------------- |
+| Formato     | `flac`                      |
+| Codec       | `flac`                      |
+| Canales     | `1` mono                    |
 | Sample rate | `16000` Hz para voz general |
-| Bitrate | Lossless, no fijar bitrate |
+| Bitrate     | Lossless, no fijar bitrate  |
 
 Payload de referencia:
 
@@ -224,40 +224,40 @@ scene_detection
 ## Consulta y eliminación
 
 ```txt
-GET /api/v2/media/:mediaId/artifacts
-GET /api/v2/media/:mediaId/jobs
-GET /api/v2/artifacts
-GET /api/v2/artifacts/:artifactId
-GET /api/v2/artifacts/:artifactId/children
-GET /api/v2/artifacts/:artifactId/jobs
+GET /api/v1/media/:mediaId/artifacts
+GET /api/v1/media/:mediaId/jobs
+GET /api/v1/artifacts
+GET /api/v1/artifacts/:artifactId
+GET /api/v1/artifacts/:artifactId/children
+GET /api/v1/artifacts/:artifactId/jobs
 ```
 
 El almacenamiento es permanente hasta que se elimina explícitamente:
 
 ```txt
-DELETE /api/v2/media/:mediaId
-DELETE /api/v2/media/:mediaId?includeArtifacts=true
-DELETE /api/v2/artifacts/:artifactId
-DELETE /api/v2/artifacts/:artifactId?includeChildren=true
+DELETE /api/v1/media/:mediaId
+DELETE /api/v1/media/:mediaId?includeArtifacts=true
+DELETE /api/v1/artifacts/:artifactId
+DELETE /api/v1/artifacts/:artifactId?includeChildren=true
 ```
 
 ## Validación de media
 
 ```txt
-POST /api/v2/media/:mediaId/validations
+POST /api/v1/media/:mediaId/validations
 ```
 
 Reglas soportadas:
 
-| Campo | Descripción |
-|---|---|
-| `allowedTypes` | `audio`, `video` |
-| `maxSizeMb` | Tamaño máximo en MB |
-| `maxDurationSeconds` | Duración máxima |
-| `requireAudio` | Indica si debe tener audio |
-| `maxResolution` | Formato `WIDTHxHEIGHT`, por ejemplo `1920x1080` |
-| `allowedContainers` | Lista de contenedores permitidos |
-| `allowedVideoCodecs` | Lista de codecs de video permitidos |
-| `allowedAudioCodecs` | Lista de codecs de audio permitidos |
+| Campo                | Descripción                                     |
+| -------------------- | ----------------------------------------------- |
+| `allowedTypes`       | `audio`, `video`                                |
+| `maxSizeMb`          | Tamaño máximo en MB                             |
+| `maxDurationSeconds` | Duración máxima                                 |
+| `requireAudio`       | Indica si debe tener audio                      |
+| `maxResolution`      | Formato `WIDTHxHEIGHT`, por ejemplo `1920x1080` |
+| `allowedContainers`  | Lista de contenedores permitidos                |
+| `allowedVideoCodecs` | Lista de codecs de video permitidos             |
+| `allowedAudioCodecs` | Lista de codecs de audio permitidos             |
 
 La validación usa la metadata persistida en `Media.metadata`.

@@ -1,27 +1,27 @@
 openapi: 3.0.3
 info:
-  title: Media FFmpeg Service API v2
+  title: Media FFmpeg Service API v1
   version: 2.0.0
-  description: API v2 para almacenamiento, consulta y procesamiento asíncrono de media y artefactos.
+  description: API v1 para almacenamiento, consulta y procesamiento asíncrono de media y artefactos.
 servers:
-  - url: /api/v2
+- url: /api/v1
 tags:
-  - name: Health
-  - name: Media
-  - name: Artifacts
-  - name: Jobs
-  - name: Operations
+- name: Health
+- name: Media
+- name: Artifacts
+- name: Jobs
+- name: Operations
 paths:
   /health:
     get:
-      tags: [Health]
+      tags: [ Health ]
       summary: Verifica que la API está disponible.
       responses:
         '200':
           description: Servicio disponible.
   /media:
     post:
-      tags: [Media]
+      tags: [ Media ]
       summary: Sube un archivo multimedia original y lo almacena permanentemente.
       requestBody:
         required: true
@@ -29,7 +29,7 @@ paths:
           multipart/form-data:
             schema:
               type: object
-              required: [file]
+              required: [ file ]
               properties:
                 file:
                   type: string
@@ -42,73 +42,73 @@ paths:
         '201':
           description: Archivo subido correctamente.
     get:
-      tags: [Media]
+      tags: [ Media ]
       summary: Lista archivos multimedia originales subidos.
       parameters:
-        - $ref: '#/components/parameters/Page'
-        - $ref: '#/components/parameters/Limit'
-        - name: mediaType
-          in: query
-          schema:
-            type: string
-            enum: [audio, video, unknown]
-        - name: source
-          in: query
-          schema:
-            type: string
-        - name: purpose
-          in: query
-          schema:
-            type: string
+      - $ref: '#/components/parameters/Page'
+      - $ref: '#/components/parameters/Limit'
+      - name: mediaType
+        in: query
+        schema:
+          type: string
+          enum: [ audio, video, unknown ]
+      - name: source
+        in: query
+        schema:
+          type: string
+      - name: purpose
+        in: query
+        schema:
+          type: string
       responses:
         '200':
           description: Archivos obtenidos correctamente.
   /media/{mediaId}:
     get:
-      tags: [Media]
+      tags: [ Media ]
       summary: Obtiene información básica de un archivo multimedia original.
       parameters:
-        - $ref: '#/components/parameters/MediaId'
+      - $ref: '#/components/parameters/MediaId'
       responses:
         '200':
           description: Archivo obtenido correctamente.
     delete:
-      tags: [Media]
+      tags: [ Media ]
       summary: Elimina un archivo multimedia original.
       parameters:
-        - $ref: '#/components/parameters/MediaId'
-        - name: includeArtifacts
-          in: query
-          schema:
-            type: boolean
-            default: false
+      - $ref: '#/components/parameters/MediaId'
+      - name: includeArtifacts
+        in: query
+        schema:
+          type: boolean
+          default: false
       responses:
         '200':
           description: Archivo eliminado correctamente.
   /media/{mediaId}/download:
     get:
-      tags: [Media]
+      tags: [ Media ]
       summary: Descarga el archivo multimedia original.
       parameters:
-        - $ref: '#/components/parameters/MediaId'
+      - $ref: '#/components/parameters/MediaId'
       responses:
         '200':
           description: Stream binario del archivo.
   /media/{mediaId}/metadata:
     get:
-      tags: [Media]
+      tags: [ Media ]
       summary: Obtiene metadata básica persistida.
       parameters:
-        - $ref: '#/components/parameters/MediaId'
+      - $ref: '#/components/parameters/MediaId'
       responses:
         '200':
           description: Metadata obtenida correctamente.
   /media/{mediaId}/validations:
     post:
-      tags: [Media]
+      tags: [ Media ]
       summary: Valida el archivo multimedia contra reglas técnicas.
       parameters:
-        - $ref: '#/components/parameters/MediaId'
+      - $ref: '#/components/parameters/MediaId'
       requestBody:
         required: false
         content:
@@ -120,115 +120,115 @@ paths:
           description: Validación ejecutada correctamente.
   /media/{mediaId}/artifacts:
     get:
-      tags: [Media]
+      tags: [ Media ]
       summary: Lista artefactos generados a partir del media.
       parameters:
-        - $ref: '#/components/parameters/MediaId'
-        - $ref: '#/components/parameters/Page'
-        - $ref: '#/components/parameters/Limit'
-        - name: type
-          in: query
-          schema:
-            $ref: '#/components/schemas/ArtifactType'
+      - $ref: '#/components/parameters/MediaId'
+      - $ref: '#/components/parameters/Page'
+      - $ref: '#/components/parameters/Limit'
+      - name: type
+        in: query
+        schema:
+          $ref: '#/components/schemas/ArtifactType'
       responses:
         '200':
           description: Artefactos obtenidos correctamente.
   /media/{mediaId}/jobs:
     get:
-      tags: [Media]
+      tags: [ Media ]
       summary: Lista jobs asociados al media.
       parameters:
-        - $ref: '#/components/parameters/MediaId'
-        - $ref: '#/components/parameters/Page'
-        - $ref: '#/components/parameters/Limit'
+      - $ref: '#/components/parameters/MediaId'
+      - $ref: '#/components/parameters/Page'
+      - $ref: '#/components/parameters/Limit'
       responses:
         '200':
           description: Jobs obtenidos correctamente.
   /artifacts:
     get:
-      tags: [Artifacts]
+      tags: [ Artifacts ]
       summary: Lista todos los artefactos generados.
       parameters:
-        - $ref: '#/components/parameters/Page'
-        - $ref: '#/components/parameters/Limit'
-        - name: type
-          in: query
-          schema:
-            $ref: '#/components/schemas/ArtifactType'
-        - name: mediaId
-          in: query
-          schema:
-            type: string
-        - name: jobId
-          in: query
-          schema:
-            type: string
-        - name: sourceType
-          in: query
-          schema:
-            type: string
-            enum: [media, artifact]
-        - name: sourceId
-          in: query
-          schema:
-            type: string
+      - $ref: '#/components/parameters/Page'
+      - $ref: '#/components/parameters/Limit'
+      - name: type
+        in: query
+        schema:
+          $ref: '#/components/schemas/ArtifactType'
+      - name: mediaId
+        in: query
+        schema:
+          type: string
+      - name: jobId
+        in: query
+        schema:
+          type: string
+      - name: sourceType
+        in: query
+        schema:
+          type: string
+          enum: [ media, artifact ]
+      - name: sourceId
+        in: query
+        schema:
+          type: string
       responses:
         '200':
           description: Artefactos obtenidos correctamente.
   /artifacts/{artifactId}:
     get:
-      tags: [Artifacts]
+      tags: [ Artifacts ]
       summary: Obtiene información básica y metadata de un artefacto.
       parameters:
-        - $ref: '#/components/parameters/ArtifactId'
+      - $ref: '#/components/parameters/ArtifactId'
       responses:
         '200':
           description: Artefacto obtenido correctamente.
     delete:
-      tags: [Artifacts]
+      tags: [ Artifacts ]
       summary: Elimina un artefacto.
       parameters:
-        - $ref: '#/components/parameters/ArtifactId'
-        - name: includeChildren
-          in: query
-          schema:
-            type: boolean
-            default: false
+      - $ref: '#/components/parameters/ArtifactId'
+      - name: includeChildren
+        in: query
+        schema:
+          type: boolean
+          default: false
       responses:
         '200':
           description: Artefacto eliminado correctamente.
   /artifacts/{artifactId}/download:
     get:
-      tags: [Artifacts]
+      tags: [ Artifacts ]
       summary: Descarga el archivo físico asociado al artefacto.
       parameters:
-        - $ref: '#/components/parameters/ArtifactId'
+      - $ref: '#/components/parameters/ArtifactId'
       responses:
         '200':
           description: Stream binario del artefacto.
   /artifacts/{artifactId}/children:
     get:
-      tags: [Artifacts]
+      tags: [ Artifacts ]
       summary: Lista artefactos generados directamente desde ese artefacto.
       parameters:
-        - $ref: '#/components/parameters/ArtifactId'
+      - $ref: '#/components/parameters/ArtifactId'
       responses:
         '200':
           description: Artefactos hijos obtenidos correctamente.
   /artifacts/{artifactId}/jobs:
     get:
-      tags: [Artifacts]
+      tags: [ Artifacts ]
       summary: Lista jobs que usaron ese artefacto como fuente.
       parameters:
-        - $ref: '#/components/parameters/ArtifactId'
-        - $ref: '#/components/parameters/Page'
-        - $ref: '#/components/parameters/Limit'
+      - $ref: '#/components/parameters/ArtifactId'
+      - $ref: '#/components/parameters/Page'
+      - $ref: '#/components/parameters/Limit'
       responses:
         '200':
           description: Jobs obtenidos correctamente.
   /jobs:
     post:
-      tags: [Jobs]
+      tags: [ Jobs ]
       summary: Crea un job asíncrono para procesar un media o un artefacto.
       requestBody:
         required: true
@@ -240,50 +240,50 @@ paths:
         '202':
           description: Job creado correctamente.
     get:
-      tags: [Jobs]
+      tags: [ Jobs ]
       summary: Lista jobs creados.
       parameters:
-        - $ref: '#/components/parameters/Page'
-        - $ref: '#/components/parameters/Limit'
-        - name: status
-          in: query
-          schema:
-            $ref: '#/components/schemas/JobStatus'
-        - name: type
-          in: query
-          schema:
-            $ref: '#/components/schemas/JobType'
-        - name: mediaId
-          in: query
-          schema:
-            type: string
-        - name: sourceType
-          in: query
-          schema:
-            type: string
-            enum: [media, artifact]
-        - name: sourceId
-          in: query
-          schema:
-            type: string
+      - $ref: '#/components/parameters/Page'
+      - $ref: '#/components/parameters/Limit'
+      - name: status
+        in: query
+        schema:
+          $ref: '#/components/schemas/JobStatus'
+      - name: type
+        in: query
+        schema:
+          $ref: '#/components/schemas/JobType'
+      - name: mediaId
+        in: query
+        schema:
+          type: string
+      - name: sourceType
+        in: query
+        schema:
+          type: string
+          enum: [ media, artifact ]
+      - name: sourceId
+        in: query
+        schema:
+          type: string
       responses:
         '200':
           description: Jobs obtenidos correctamente.
   /jobs/{jobId}:
     get:
-      tags: [Jobs]
+      tags: [ Jobs ]
       summary: Obtiene estado, progreso, resultado, error y artefactos de un job.
       parameters:
-        - $ref: '#/components/parameters/JobId'
+      - $ref: '#/components/parameters/JobId'
       responses:
         '200':
           description: Job obtenido correctamente.
   /jobs/{jobId}/cancel:
     post:
-      tags: [Jobs]
+      tags: [ Jobs ]
       summary: Cancela un job pendiente o en ejecución.
       parameters:
-        - $ref: '#/components/parameters/JobId'
+      - $ref: '#/components/parameters/JobId'
       responses:
         '200':
           description: Job cancelado correctamente.
@@ -291,10 +291,10 @@ paths:
           description: Estado no permite cancelación.
   /jobs/{jobId}/retry:
     post:
-      tags: [Jobs]
+      tags: [ Jobs ]
       summary: Reintenta un job fallido o cancelado.
       parameters:
-        - $ref: '#/components/parameters/JobId'
+      - $ref: '#/components/parameters/JobId'
       responses:
         '202':
           description: Job reencolado correctamente.
@@ -302,21 +302,21 @@ paths:
           description: Estado no permite reintento.
   /operations:
     get:
-      tags: [Operations]
+      tags: [ Operations ]
       summary: Lista operaciones de procesamiento disponibles.
       responses:
         '200':
           description: Operaciones obtenidas correctamente.
   /operations/{type}:
     get:
-      tags: [Operations]
+      tags: [ Operations ]
       summary: Obtiene una operación por tipo.
       parameters:
-        - name: type
-          in: path
-          required: true
-          schema:
-            $ref: '#/components/schemas/JobType'
+      - name: type
+        in: path
+        required: true
+        schema:
+          $ref: '#/components/schemas/JobType'
       responses:
         '200':
           description: Operación obtenida correctamente.
@@ -359,44 +359,44 @@ components:
     ArtifactType:
       type: string
       enum:
-        - audio_transcoded
-        - audio_chunk
-        - audio_normalized
-        - audio_silence_removed
-        - audio_extract
-        - video_transcoded
-        - video_compressed
-        - video_segment
-        - frame
-        - thumbnail
-        - scene_detection
+      - audio_transcoded
+      - audio_chunk
+      - audio_normalized
+      - audio_silence_removed
+      - audio_extract
+      - video_transcoded
+      - video_compressed
+      - video_segment
+      - frame
+      - thumbnail
+      - scene_detection
     JobType:
       type: string
       enum:
-        - media.extractMetadata
-        - audio.transcode
-        - audio.chunk
-        - audio.normalize
-        - audio.removeSilence
-        - video.extractAudio
-        - video.transcode
-        - video.compress
-        - video.split
-        - video.extractFrames
-        - video.detectScenes
-        - video.generateThumbnails
+      - media.extractMetadata
+      - audio.transcode
+      - audio.chunk
+      - audio.normalize
+      - audio.removeSilence
+      - video.extractAudio
+      - video.transcode
+      - video.compress
+      - video.split
+      - video.extractFrames
+      - video.detectScenes
+      - video.generateThumbnails
     JobStatus:
       type: string
-      enum: [queued, active, completed, failed, cancelled]
+      enum: [ queued, active, completed, failed, cancelled ]
     CreateJobRequest:
       type: object
-      required: [type]
+      required: [ type ]
       properties:
         type:
           $ref: '#/components/schemas/JobType'
         sourceType:
           type: string
-          enum: [media, artifact]
+          enum: [ media, artifact ]
           default: media
         sourceId:
           type: string

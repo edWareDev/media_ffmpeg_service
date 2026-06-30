@@ -37,6 +37,6 @@ export const JobRepositoryImpl = {
     },
 
     async updateById(jobId, data) {
-        return JobModel.findOneAndUpdate({ jobId }, { $set: data }, { new: true }).lean();
+        return JobModel.findOneAndUpdate({ jobId }, { $set: data }, { returnDocument: true }).lean();
     }
 };

@@ -10,6 +10,7 @@ import { removeFileIfExists } from '../../utils/fileSystem.js';
 import { fetchResponse } from '../../utils/fetchResponse.js';
 import { HTTP_CODES } from '../../utils/HTTP_CODES.js';
 import { handleControllerError, throwIfError } from './controllerHelpers.js';
+import { getMediaJobs } from '../../usecases/media/GetMediaJobs.js';
 
 export const uploadMediaController = async (req, res) => {
     try {
@@ -94,6 +95,16 @@ export const deleteMediaController = async (req, res) => {
         const result = await deleteMedia(req.params.mediaId, req.query);
         throwIfError(result, 'No se pudo eliminar el archivo.');
         fetchResponse(res, { statusCode: HTTP_CODES._200_OK, message: 'Archivo eliminado correctamente.', data: result });
+    } catch (error) {
+        handleControllerError(res, error);
+    }
+};
+
+export const getMediaJobsController = async (req, res) => {
+    try {
+        const result = await getMediaJobs(req.params.mediaId, req.query);
+        throwIfError(result, 'No se pudieron obtener los jobs del archivo.');
+        fetchResponse(res, { statusCode: HTTP_CODES._200_OK, message: 'Jobs obtenidos correctamente.', data: result });
     } catch (error) {
         handleControllerError(res, error);
     }

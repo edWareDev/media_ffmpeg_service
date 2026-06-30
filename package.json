@@ -5,8 +5,8 @@
   "type": "module",
   "main": "src/main.js",
   "scripts": {
-    "start": "node src/main.js",
-    "dev": "node --watch src/main.js",
+    "start": "node --env-file .env src/main.js",
+    "dev": "node --env-file .env.development --watch src/main.js",
     "lint": "eslint . --cache --cache-location .cache/eslint/",
     "lint:watch": "node --watch --watch-path=src --watch-path=config --watch-path=eslint.config.js ./node_modules/eslint/bin/eslint.js . --cache --cache-location .cache/eslint/",
     "test": "vitest run",
@@ -18,7 +18,6 @@
   },
   "dependencies": {
     "bullmq": "5.77.6",
-    "dotenv": "17.4.2",
     "express": "5.2.1",
     "ffmpeg-static": "5.3.0",
     "ffprobe-static": "3.1.0",
