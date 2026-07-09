@@ -14,6 +14,7 @@ import {
 } from './audioValidators.js';
 import { createJobSchema } from './jobValidators.js';
 import { videoExtractAudioSchema } from './videoValidators.js';
+import { validateSchema } from '../../../utils/validateSchema.js';
 
 describe('media validators', () => {
     it('normalizes artifactType query into type', () => {
@@ -168,6 +169,49 @@ describe('media validators', () => {
             bitrate: '96k',
             channels: 1,
             sampleRate: 48000
+        });
+    });
+
+    it('rejects unsupported Opus sample rates', () => {
+        const result = videoExtractAudioSchema.safeParse({
+            targetFormat: 'ogg',
+            codec: 'libopus',
+            sampleRate: 34304
+        });
+
+        expect(result.success).toBe(false);
+        expect(result.error.issues[0]).toMatchObject({
+            path: ['sampleRate']
+        });
+    });
+
+    it('rejects audio codecs incompatible with target format', () => {
+        const result = videoExtractAudioSchema.safeParse({
+            targetFormat: 'flac',
+            codec: 'libopus',
+            sampleRate: 48000
+        });
+
+        expect(result.success).toBe(false);
+        expect(result.error.issues[0]).toMatchObject({
+            path: ['codec']
+        });
+    });
+
+    it('returns validation details with Zod v4 errors', () => {
+        const result = validateSchema(videoExtractAudioSchema, {
+            targetFormat: 'ogg',
+            codec: 'libopus',
+            sampleRate: 34304
+        });
+
+        expect(result.error).toMatchObject({
+            code: 'VALIDATION_FAILED',
+            details: [
+                {
+                    path: 'sampleRate'
+                }
+            ]
         });
     });
 });

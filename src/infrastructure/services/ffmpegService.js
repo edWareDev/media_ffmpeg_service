@@ -41,6 +41,28 @@ const encoderByCodec = {
     pcm_s16le: 'pcm_s16le'
 };
 
+const defaultEncoderByFormat = {
+    ogg: 'libopus',
+    mp3: 'libmp3lame',
+    m4a: 'aac',
+    flac: 'flac',
+    wav: 'pcm_s16le'
+};
+
+const extensionByEncoder = {
+    libopus: 'ogg',
+    opus: 'ogg',
+    libvorbis: 'ogg',
+    vorbis: 'ogg',
+    libmp3lame: 'mp3',
+    mp3: 'mp3',
+    aac: 'm4a',
+    flac: 'flac',
+    pcm_s16le: 'wav'
+};
+
+const opusSampleRates = new Set([48000, 24000, 16000, 12000, 8000]);
+
 const extensionByContainer = {
     ogg: 'ogg',
     wav: 'wav',
@@ -67,6 +89,14 @@ const bitrateFromBps = (value) => {
     return Number.isFinite(kbps) ? `${kbps}k` : undefined;
 };
 
+const isOpusEncoder = (codec) => ['libopus', 'opus'].includes(codec);
+
+const resolveAudioSampleRate = (codec, requestedSampleRate, sourceSampleRate) => {
+    if (requestedSampleRate) return requestedSampleRate;
+    if (isOpusEncoder(codec) && sourceSampleRate && !opusSampleRates.has(sourceSampleRate)) return 48000;
+    return sourceSampleRate;
+};
+
 const hasExplicitAudioEncoding = (options) => Boolean(
     options.codec ||
     options.bitrate ||
@@ -77,18 +107,21 @@ const hasExplicitAudioEncoding = (options) => Boolean(
 
 const resolveAudioOutputSettings = (sourceMetadata, options, fallbackFormat = 'ogg') => {
     const sourceContainer = sourceMetadata.container?.split(',')[0];
+    const sourceAudioCodec = sourceMetadata.audioCodec || (sourceMetadata.mediaType === 'audio' ? sourceMetadata.codec : undefined);
+    const requestedFormat = options.targetFormat ? extensionFromFormat(options.targetFormat) : undefined;
     const format = extensionFromFormat(
-        options.targetFormat,
-        extensionByCodec[sourceMetadata.codec] || extensionByContainer[sourceContainer] || fallbackFormat
+        requestedFormat,
+        extensionByEncoder[options.codec] || extensionByCodec[sourceAudioCodec] || extensionByContainer[sourceContainer] || fallbackFormat
     );
+    const codec = options.codec || (requestedFormat ? defaultEncoderByFormat[format] : encoderByCodec[sourceAudioCodec]);
 
     return {
         format,
-        codec: options.codec || encoderByCodec[sourceMetadata.codec],
+        codec,
         bitrate: options.bitrate === null ? undefined : options.bitrate || bitrateFromBps(sourceMetadata.bitrate),
         channels: options.channels || sourceMetadata.channels,
-        sampleRate: options.sampleRate || sourceMetadata.sampleRate,
-        canCopyAudio: !hasExplicitAudioEncoding(options)
+        sampleRate: resolveAudioSampleRate(codec, options.sampleRate, sourceMetadata.sampleRate),
+        canCopyAudio: !requestedFormat && !hasExplicitAudioEncoding(options)
     };
 };
 
@@ -127,6 +160,7 @@ const probeInput = async (inputPath) => {
         container: data.format?.format_name,
         width: videoStream?.width,
         height: videoStream?.height,
+        audioCodec: audioStream?.codec_name,
         channels: audioStream?.channels,
         sampleRate: audioStream?.sample_rate ? Number(audioStream.sample_rate) : undefined,
         bitrate: data.format?.bit_rate ? Number(data.format.bit_rate) : undefined

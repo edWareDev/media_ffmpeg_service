@@ -227,6 +227,22 @@ Payload de referencia:
 
 ## Audio
 
+### Compatibilidad de codec, formato y sample rate
+
+Los endpoints de audio y extracción de audio desde video validan estas combinaciones:
+
+| `targetFormat` | `codec` permitido |
+|---|---|
+| `flac` | `flac` |
+| `wav` | `pcm_s16le` |
+| `mp3` | `libmp3lame`, `mp3` |
+| `ogg` | `libopus`, `opus`, `libvorbis`, `vorbis` |
+| `m4a` | `aac` |
+
+Si se envía `targetFormat` sin `codec`, el servicio elige un encoder compatible con el formato. Para `ogg` usa Opus por defecto.
+
+Opus solo acepta estos `sampleRate`: `48000`, `24000`, `16000`, `12000`, `8000`. Si se genera Opus y el origen tiene otro sample rate, el servicio usa `48000` salvo que el cliente envíe explícitamente otro valor válido.
+
 ### Conversión
 
 Endpoint:

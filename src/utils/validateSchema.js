@@ -9,7 +9,7 @@ export const validateSchema = (schema, payload) => {
             return {
                 error: {
                     code: ERROR_CODES.VALIDATION_FAILED,
-                    details: error.errors.map((entry) => ({
+                    details: error.issues.map((entry) => ({
                         path: entry.path.join('.'),
                         message: entry.message
                     }))

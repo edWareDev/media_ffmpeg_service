@@ -1,12 +1,7 @@
 import { z } from 'zod';
+import { audioOutputOptionsSchema } from './audioValidators.js';
 
-export const videoExtractAudioSchema = z.object({
-    targetFormat: z.enum(['flac', 'wav', 'mp3', 'ogg', 'm4a']).optional(),
-    codec: z.string().optional(),
-    bitrate: z.string().nullable().optional(),
-    channels: z.number().int().min(1).max(8).optional(),
-    sampleRate: z.number().int().min(8000).max(192000).optional()
-});
+export const videoExtractAudioSchema = audioOutputOptionsSchema;
 
 export const videoTranscodeSchema = z.object({
     container: z.enum(['mp4', 'webm', 'mkv', 'mov']).default('mp4'),

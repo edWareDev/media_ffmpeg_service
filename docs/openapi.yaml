@@ -1456,7 +1456,8 @@ components:
           description: Si no se envía, se intenta preservar el contenedor/formato del original.
         codec:
           type: string
-          description: Si no se envía, se copia o preserva el codec original cuando sea viable.
+          enum: [flac, pcm_s16le, libmp3lame, mp3, libopus, opus, libvorbis, vorbis, aac]
+          description: Debe ser compatible con targetFormat. Si no se envía, se copia o preserva el codec original cuando sea viable, o se elige un encoder compatible cuando se pide targetFormat.
           example: libopus
         channels:
           type: integer
@@ -1467,7 +1468,7 @@ components:
           type: integer
           minimum: 8000
           maximum: 192000
-          description: Si no se envía, se preserva el sample rate original cuando sea viable.
+          description: Si se usa Opus, solo se aceptan 48000, 24000, 16000, 12000 u 8000. Si no se envía, se preserva el sample rate original cuando sea viable.
         bitrate:
           type: string
           nullable: true
@@ -1494,7 +1495,8 @@ components:
           default: false
         codec:
           type: string
-          description: Si no se envía, se intenta preservar el codec original cuando sea viable.
+          enum: [flac, pcm_s16le, libmp3lame, mp3, libopus, opus, libvorbis, vorbis, aac]
+          description: Debe ser compatible con targetFormat. Si no se envía, se intenta preservar el codec original cuando sea viable, o se elige un encoder compatible cuando se pide targetFormat.
           example: libopus
         bitrate:
           type: string
@@ -1511,7 +1513,7 @@ components:
           type: integer
           minimum: 8000
           maximum: 192000
-          description: Si no se envía, se intenta preservar el sample rate original.
+          description: Si se usa Opus, solo se aceptan 48000, 24000, 16000, 12000 u 8000. Si no se envía, se intenta preservar el sample rate original.
           example: 48000
     AudioNormalizeOptions:
       type: object
@@ -1537,7 +1539,8 @@ components:
           description: Si no se envía, se intenta preservar el contenedor/formato del original.
         codec:
           type: string
-          description: Si no se envía, se intenta preservar el codec original cuando sea viable.
+          enum: [flac, pcm_s16le, libmp3lame, mp3, libopus, opus, libvorbis, vorbis, aac]
+          description: Debe ser compatible con targetFormat. Si no se envía, se intenta preservar el codec original cuando sea viable, o se elige un encoder compatible cuando se pide targetFormat.
           example: libopus
         bitrate:
           type: string
@@ -1554,7 +1557,7 @@ components:
           type: integer
           minimum: 8000
           maximum: 192000
-          description: Si no se envía, se intenta preservar el sample rate original.
+          description: Si se usa Opus, solo se aceptan 48000, 24000, 16000, 12000 u 8000. Si no se envía, se intenta preservar el sample rate original.
           example: 48000
     AudioRemoveSilenceOptions:
       type: object
@@ -1575,7 +1578,8 @@ components:
           description: Si no se envía, se intenta preservar el contenedor/formato del original.
         codec:
           type: string
-          description: Si no se envía, se intenta preservar el codec original cuando sea viable.
+          enum: [flac, pcm_s16le, libmp3lame, mp3, libopus, opus, libvorbis, vorbis, aac]
+          description: Debe ser compatible con targetFormat. Si no se envía, se intenta preservar el codec original cuando sea viable, o se elige un encoder compatible cuando se pide targetFormat.
           example: libopus
         bitrate:
           type: string
@@ -1592,7 +1596,7 @@ components:
           type: integer
           minimum: 8000
           maximum: 192000
-          description: Si no se envía, se intenta preservar el sample rate original.
+          description: Si se usa Opus, solo se aceptan 48000, 24000, 16000, 12000 u 8000. Si no se envía, se intenta preservar el sample rate original.
           example: 48000
 
     VideoExtractAudioOptions:
@@ -1604,7 +1608,8 @@ components:
           description: Si no se envía, se intenta preservar el formato/codec de audio extraído cuando sea viable.
         codec:
           type: string
-          description: Si no se envía, se copia o preserva el codec original cuando sea viable.
+          enum: [flac, pcm_s16le, libmp3lame, mp3, libopus, opus, libvorbis, vorbis, aac]
+          description: Debe ser compatible con targetFormat. Si no se envía, se copia o preserva el codec original cuando sea viable, o se elige un encoder compatible cuando se pide targetFormat.
           example: libopus
         bitrate:
           type: string
@@ -1620,7 +1625,7 @@ components:
           type: integer
           minimum: 8000
           maximum: 192000
-          description: Si no se envía, se preserva el sample rate original cuando sea viable.
+          description: Si se usa Opus, solo se aceptan 48000, 24000, 16000, 12000 u 8000. Si no se envía, se preserva el sample rate original cuando sea viable.
     VideoTranscodeOptions:
       type: object
       properties:
